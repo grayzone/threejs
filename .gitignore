@@ -3,6 +3,7 @@ node_modules/
 vendor/
 download/
 data/
+static/
 
 *.db
 webtemplate
