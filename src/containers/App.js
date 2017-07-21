@@ -4,7 +4,7 @@ import { Tabs } from "antd";
 import First from "./first";
 import Second from "./second";
 import Third from "./third";
-
+import Fourth from "./fourth";
 
 export default class App extends React.Component {
   render() {
@@ -20,7 +20,10 @@ export default class App extends React.Component {
           <Second width={width} height={height} />
         </TabPane>
         <TabPane tab="3" key="3">
-          <Third width={width} height={width} />
+          <Third width={width} height={height} />
+        </TabPane>
+        <TabPane tab="4" key="4">
+          <Fourth width={width} height={height} />
         </TabPane>
       </Tabs>
     );
