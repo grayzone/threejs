@@ -25,7 +25,7 @@ export default class Fourth extends React.Component {
   addCamera = () => {
     this.camera = new THREE.PerspectiveCamera(
       45,
-      window.innerWidth / window.innerHeight,
+      this.props.width / this.props.height,
       1,
       500
     );

@@ -10,7 +10,7 @@ export default class Third extends React.Component {
 
     this.camera = new THREE.PerspectiveCamera(
       60,
-      window.innerWidth / window.innerHeight,
+      this.props.width / this.props.height,
       0.1,
       1000
     );
