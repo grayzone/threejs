@@ -161,11 +161,6 @@ export default class Fifth extends React.Component {
     this.scene.add(particles);
   };
 
-  addLight = () => {
-    let light = new THREE.PointLight(0xffff00);
-    light.position.set(1, 0, 2);
-    this.scene.add(light);
-  };
 
   animate = () => {
     requestAnimationFrame(this.animate);
