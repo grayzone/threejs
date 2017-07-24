@@ -7,6 +7,7 @@ import Third from "./third";
 import Fourth from "./fourth";
 import Fifth from "./fifth";
 import Sixth from "./sixth";
+import Seventh from "./seventh";
 
 export default class App extends React.Component {
   render() {
@@ -14,7 +15,7 @@ export default class App extends React.Component {
     let height = 512;
     const TabPane = Tabs.TabPane;
     return (
-      <Tabs tabPosition="left" defaultActiveKey="6">
+      <Tabs tabPosition="left" defaultActiveKey="7">
         <TabPane tab="1" key="1">
           <First width={width} height={height} />
         </TabPane>
@@ -32,6 +33,9 @@ export default class App extends React.Component {
         </TabPane>
         <TabPane tab="6" key="6">
           <Sixth width={width} height={height} />
+        </TabPane>
+        <TabPane tab="7" key="7">
+          <Seventh width={width} height={height} />
         </TabPane>
       </Tabs>
     );

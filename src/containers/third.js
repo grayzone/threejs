@@ -1,8 +1,6 @@
 import React from "react";
 import * as THREE from "three";
-import threeOrbitControls from "three-orbit-controls";
-
-var OrbitControls = threeOrbitControls(THREE);
+import OrbitControls from "orbit-controls-es6";
 
 export default class Third extends React.Component {
   initRender = () => {
@@ -30,8 +28,9 @@ export default class Third extends React.Component {
     this.addGeometry2();
     this.addLight();
     this.addShadow();
-    this.addControl();
+
     this.animate();
+    this.addControl();
   }
 
   addGeometry1 = () => {
@@ -95,13 +94,13 @@ export default class Third extends React.Component {
 
   addControl = () => {
     let c = new OrbitControls(this.camera, this.renderer.domElement);
-    c.target = new THREE.Vector3(0, 15, 0);
+    c.enabled = true;
+    c.target.set(0, 15, 0);
     c.maxPolarAngle = Math.PI / 2;
-    c.addEventListener("change", this.animate);
   };
 
   animate = () => {
-//    requestAnimationFrame(this.animate);
+    requestAnimationFrame(this.animate);
 
     this.renderer.render(this.scene, this.camera);
   };
