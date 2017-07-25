@@ -19,13 +19,16 @@ export default class Seventh extends React.Component {
   };
 
   componentDidMount = () => {
-    this.camera();
-    this.scene();
-    this.addLight();
-    this.addGroup();
     this.renderer();
-    this.stats();
+    this.scene();
+    this.camera();   
+    
+    this.addGroup();
+    this.addLight();
+        
+    
     this.gui();
+    this.stats();
     this.addControl();
 
     this.animate();
