@@ -21,14 +21,13 @@ export default class Seventh extends React.Component {
   componentDidMount = () => {
     this.renderer();
     this.scene();
-    this.camera();   
-    
+    this.camera();
+
     this.addGroup();
     this.addLight();
-        
-    
-    this.gui();
+    this.datGUI();
     this.stats();
+
     this.addControl();
 
     this.animate();
@@ -36,8 +35,10 @@ export default class Seventh extends React.Component {
 
   stats = () => {
     this.stats = new Stats();
-    this.stats.showPanel(1);
-    this.stats.dom.style.position = "relative";
+    //   this.stats.showPanel(1);
+    this.stats.dom.style.position = "absolute";
+    this.stats.dom.style.top = "60px";
+    this.stats.dom.style.left = "600px";
     this.refs.seventh.appendChild(this.stats.dom);
   };
 
@@ -49,10 +50,15 @@ export default class Seventh extends React.Component {
     }
   };
 
-  gui = () => {
-    const gui = new dat.GUI();
+  datGUI = () => {
+    let gui = new dat.GUI();
     gui.add(mode, "clipIntersection").onChange(this.switchClipIntersection);
     gui.add(mode, "clipPosition", -16, 16);
+    gui.domElement.style.position = "absolute";
+    gui.domElement.style.top = "0px";
+    gui.domElement.style.left = "600px";
+
+    this.refs.seventh.appendChild(gui.domElement);
   };
 
   scene = () => {
