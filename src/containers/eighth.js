@@ -23,12 +23,13 @@ export default class Eighth extends React.Component {
     this.scene();
     this.camera();
 
-    this.loadLiver();
-    this.addLight();
+    this.loadData();
+
+    this.light();
     this.datGUI();
     this.stats();
 
-    this.addControl();
+    this.control();
 
     this.animate();
   };
@@ -42,18 +43,10 @@ export default class Eighth extends React.Component {
     this.refs.eighth.appendChild(this.stats.dom);
   };
 
-  switchClipIntersection = () => {
-    let children = this.group.children;
-    for (let i = 0; i < children.length; i++) {
-      var child = children[i];
-      child.material.clipIntersection = !child.material.clipIntersection;
-    }
-  };
-
   datGUI = () => {
     let gui = new dat.GUI();
-    gui.add(mode, "clipIntersection").onChange(this.switchClipIntersection);
-    gui.add(mode, "clipPosition", -16, 16);
+    //    gui.add(mode, "clipIntersection").onChange(this.switchClipIntersection);
+    //    gui.add(mode, "clipPosition", -16, 16);
     gui.domElement.style.position = "absolute";
     gui.domElement.style.top = "0px";
     gui.domElement.style.left = "600px";
@@ -65,7 +58,7 @@ export default class Eighth extends React.Component {
     this.scene = new THREE.Scene();
   };
 
-  addControl = () => {
+  control = () => {
     let controls = new OrbitControls(this.camera, this.renderer.domElement);
     controls.enabled = true;
     controls.target.set(0, 1, 0);
@@ -75,8 +68,6 @@ export default class Eighth extends React.Component {
   renderer = () => {
     this.renderer = new THREE.WebGLRenderer();
 
-    this.renderer.antialias = false;
-    this.renderer.alpha = true;
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setSize(this.props.width, this.props.height);
 
@@ -84,17 +75,12 @@ export default class Eighth extends React.Component {
   };
 
   camera = () => {
-    this.camera = new THREE.PerspectiveCamera(
-      55,
-      this.state.aspect,
-      2,
-      2000
-    );
+    this.camera = new THREE.PerspectiveCamera(75, this.state.aspect, 1, 10000);
 
     this.camera.position.z = 1000;
   };
 
-  addLight = () => {
+  light = () => {
     let dirlight = new THREE.DirectionalLight(0xffffff);
     dirlight.position.set(200, 200, 1000).normalize();
 
@@ -102,66 +88,49 @@ export default class Eighth extends React.Component {
     this.camera.add(dirlight.target);
   };
 
-  addGroup = () => {
-    this.group = new THREE.Object3D();
-    for (let i = 1; i < 25; i++) {
-      let geo = new THREE.SphereBufferGeometry(i / 2, 48, 48);
-      let material = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(
-          Math.sin(i * 0.5) * 0.5 + 0.5,
-          Math.cos(i * 1.5) * 0.5 + 0.5,
-          Math.sin(i * 4.5) * 0.5 + 0.5
-        ),
-        roughness: 0.95,
-        metalness: 0.0,
-        side: THREE.DoubleSide,
-        clippingPlanes: this.state.clipPlanes,
-        clipIntersection: true
-      });
-      this.group.add(new THREE.Mesh(geo, material));
+  loadData = () => {
+    let material = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      program: context => {
+        context.beginPath();
+        context.arc(0, 0, 0.5, 0, Math.PI * 2, true);
+        context.fill();
+      }
+    });
+    let geo = new THREE.Geometry();
+    for (let i = 0; i < 100; i++) {
+      let partice = new THREE.Sprite(material);
+      partice.position.x = Math.random() * 2 - 1;
+      partice.position.y = Math.random() * 2 - 1;
+      partice.position.z = Math.random() * 2 - 1;
+
+      partice.position.normalize();
+
+      partice.position.multiplyScalar(Math.random() * 10 + 450);
+      partice.scale.x = 10;
+      partice.scale.y = 10;
+
+      //    this.scene.add(partice);
+
+      geo.vertices.push(partice.position);
     }
-    this.scene.add(this.group);
-  };
 
-  loadLiverVTKImage = geo => {
-    geo.computeVertexNormals();
-    let vtkmaterial = new THREE.MeshLambertMaterial({
-      wireframe: false,
-      morphTargets: false,
-      side: THREE.DoubleSide,
-      color: 0xff0000
-    });
-    let mesh = new THREE.Mesh(geo, vtkmaterial);
-    this.scene.add(mesh);
-  };
-
-  loadLiver = () => {
-    let vtkLoader = new THREE.VTKLoader();
-    vtkLoader.load("../../data/liver.vtk", function(geometry) {
-      this.loadLiverVTKImage(geometry);
-    });
+    let line = new THREE.Line(
+      geo,
+      new THREE.LineBasicMaterial({
+        color: 0xffffff,
+        opacity: 0.5
+      })
+    );
+    this.scene.add(line);
   };
 
   animate = () => {
     this.stats.begin();
-    this.threeRender();
     this.renderer.render(this.scene, this.camera);
     this.stats.end();
 
     requestAnimationFrame(this.animate);
-  };
-
-  threeRender = () => {
-    let children = this.group.children;
-
-    for (let i = 0; i < children.length; i++) {
-      let current = children[i].material;
-
-      for (let j = 0; j < current.clippingPlanes.length; j++) {
-        let plane = current.clippingPlanes[j];
-        plane.constant = (49 * plane.constant + mode.clipPosition) / 50;
-      }
-    }
   };
 
   render = () => {
