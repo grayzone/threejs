@@ -9,7 +9,12 @@ export default class Ninth extends React.Component {
     aspect: this.props.width / this.props.height,
     segments: 200,
     splinePointLength: 4,
-    positions: []
+    positions: [],
+    params: {
+      helper: true,
+      plane: true,
+      axis: true
+    }
   };
 
   componentDidMount = () => {
@@ -38,6 +43,7 @@ export default class Ninth extends React.Component {
 
   animate = () => {
     this.stats.begin();
+    this.update();
     this.renderer.render(this.scene, this.camera);
     this.stats.end();
     requestAnimationFrame(this.animate);
@@ -51,7 +57,7 @@ export default class Ninth extends React.Component {
     this.stats = new Stats();
     //   this.stats.showPanel(1);
     this.stats.dom.style.position = "absolute";
-    this.stats.dom.style.top = "60px";
+    this.stats.dom.style.top = "0px";
     this.stats.dom.style.left = "600px";
     this.addToContainer(this.stats.dom);
   };
@@ -78,8 +84,12 @@ export default class Ninth extends React.Component {
   datGUI = () => {
     let gui = new dat.GUI();
     gui.domElement.style.position = "absolute";
-    gui.domElement.style.top = "0px";
+    gui.domElement.style.top = "50px";
     gui.domElement.style.left = "600px";
+
+    gui.add(this.state.params, "helper");
+    gui.add(this.state.params, "plane");
+    gui.add(this.state.params, "axis");
 
     this.addToContainer(gui.domElement);
   };
@@ -87,7 +97,6 @@ export default class Ninth extends React.Component {
   camera = () => {
     this.camera = new THREE.PerspectiveCamera(70, this.state.aspect, 1, 10000);
     this.camera.position.set(0, 250, 1000);
-    //  this.scene.add(this.camera);
   };
 
   light = () => {
@@ -108,45 +117,42 @@ export default class Ninth extends React.Component {
   };
 
   objects = () => {
-    this.plane();
-    this.helper();
-    this.axis();
+    this.addPlane();
+    this.addHelper();
+    this.addAxis();
     this.splines();
   };
 
-  plane = () => {
+  addPlane = () => {
     let geo = new THREE.PlaneGeometry(2000, 2000);
     geo.rotateX(-Math.PI / 2);
     let m = new THREE.ShadowMaterial({
       opacity: 0.2
     });
-    let p = new THREE.Mesh(geo, m);
-    p.position.y = -200;
-    p.receiveShadow = true;
-    this.scene.add(p);
+    this.plane = new THREE.Mesh(geo, m);
+    this.plane.position.y = -200;
+    this.plane.receiveShadow = true;
+    this.scene.add(this.plane);
   };
 
-  helper = () => {
-    let h = new THREE.GridHelper(2000, 100);
-    h.position.y = -199;
-    h.material.opacity = 0.25;
-    h.material.transparent = true;
-    this.scene.add(h);
+  addHelper = () => {
+    this.helper = new THREE.GridHelper(2000, 100);
+    this.helper.position.y = -199;
+    this.helper.material.opacity = 0.25;
+    this.helper.material.transparent = true;
+    this.scene.add(this.helper);
   };
 
-  axis = () => {
-    let a = new THREE.AxisHelper();
-    a.position.set(-500, -500, -500);
-    this.scene.add(a);
+  addAxis = () => {
+    this.axis = new THREE.AxisHelper();
+    this.axis.position.set(-500, -500, -500);
+    this.scene.add(this.axis);
   };
 
   splines = () => {
-    this.positions = [];
     for (let i = 0; i < this.state.splinePointLength; i++) {
       this.addSplineObject();
     }
- //   this.intialData();
-    console.log("positions:", this.positions);
     this.spline = [];
 
     this.addCurve("catmullrom", 0xff0000);
@@ -155,7 +161,7 @@ export default class Ninth extends React.Component {
 
     for (let k in this.spline) {
       let s = this.spline[k];
-      console.log("item:", s.mesh);
+      //      console.log("item:", s.mesh);
       this.scene.add(s.mesh);
     }
 
@@ -173,15 +179,19 @@ export default class Ninth extends React.Component {
     obj.castShadow = true;
     obj.receiveShadow = true;
 
-    this.positions.push(obj.position);
+    let newPos = this.state.positions;
+    newPos.push(obj.position);
+    this.setState({
+      positions: newPos
+    });
     this.scene.add(obj);
   };
 
   addCurve = (type, color) => {
-    let curve = new THREE.CatmullRomCurve3(this.positions);
+    let curve = new THREE.CatmullRomCurve3(this.state.positions);
     curve.type = type;
     var geometry = new THREE.Geometry();
-    
+
     geometry.vertices = curve.getPoints(200);
 
     curve.mesh = new THREE.Line(
@@ -194,5 +204,11 @@ export default class Ninth extends React.Component {
     );
     curve.mesh.castShadow = true;
     this.spline.push(curve);
+  };
+
+  update = () => {
+    this.plane.visible = this.state.params.plane;
+    this.helper.visible = this.state.params.helper;
+    this.axis.visible = this.state.params.axis;
   };
 }
