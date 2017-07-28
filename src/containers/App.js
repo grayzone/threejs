@@ -10,6 +10,7 @@ import Sixth from "./sixth";
 import Seventh from "./seventh";
 import Eighth from "./eighth";
 import Ninth from "./ninth";
+import Tenth from "./tenth";
 
 export default class App extends React.Component {
   render() {
@@ -17,7 +18,7 @@ export default class App extends React.Component {
     let height = 512;
     const TabPane = Tabs.TabPane;
     return (
-      <Tabs tabPosition="left" defaultActiveKey="9">
+      <Tabs tabPosition="left" defaultActiveKey="10">
         <TabPane tab="1" key="1">
           <First width={width} height={height} />
         </TabPane>
@@ -44,6 +45,9 @@ export default class App extends React.Component {
         </TabPane>
         <TabPane tab="9" key="9">
           <Ninth width={width} height={height} />
+        </TabPane>
+        <TabPane tab="10" key="10">
+          <Tenth width={width} height={height} />
         </TabPane>
       </Tabs>
     );

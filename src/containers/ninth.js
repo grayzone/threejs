@@ -192,7 +192,7 @@ export default class Ninth extends React.Component {
     curve.type = type;
     var geometry = new THREE.Geometry();
 
-    geometry.vertices = curve.getPoints(200);
+    geometry.vertices = curve.getPoints(this.state.segments);
 
     curve.mesh = new THREE.Line(
       geometry,
