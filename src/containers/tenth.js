@@ -50,16 +50,7 @@ export default class Tenth extends React.Component {
   };
 
   render = () => {
-    return (
-      <div>
-        <input
-          type="file"
-          id="uploadRawFile"
-          onChange={this.handleInputChange}
-        />
-        <div ref="tenth" />
-      </div>
-    );
+    return <div ref="tenth" />;
   };
 
   stats = () => {
@@ -125,7 +116,7 @@ export default class Tenth extends React.Component {
     this.addPlane();
     this.addHelper();
     this.addAxis();
-    //    this.addPoints();
+    this.loadRaw();
   };
 
   addPlane = () => {
@@ -154,14 +145,8 @@ export default class Tenth extends React.Component {
     this.scene.add(this.axis);
   };
 
-  handleInputChange = e => {
-    this.loadDataSource();
-    //    this.addPoints();
-  };
-
   addPoints = () => {
-    //   this.loadDataSource();
-    console.log("points number:", this.dataSource.points.length);
+ //   console.log("points number:", this.dataSource);
     if (this.dataSource.points.length === 0) {
       return;
     }
@@ -182,9 +167,6 @@ export default class Tenth extends React.Component {
       colors[3 * i + 1] = this.dataSource.points[i].value / 255;
       colors[3 * i + 2] = this.dataSource.points[i].value / 255;
     }
-
-    console.log("colors:", colors);
-
     geo.addAttribute("position", new THREE.BufferAttribute(positions, 3));
     geo.addAttribute("color", new THREE.BufferAttribute(colors, 3));
 
@@ -194,58 +176,63 @@ export default class Tenth extends React.Component {
     mesh.castShadow = true;
     this.scene.add(mesh);
   };
-  loadDataSource = () => {
-    if (
-      !window.File ||
-      !window.FileReader ||
-      !window.FileList ||
-      !window.Blob
-    ) {
-      console.error("The File APIs are not fully supported in this browser.");
-      return;
-    }
 
+  handleRawOnload = data => {
+    let array = new Uint8Array(data);
+ //   console.log("read mri:", array.length);
     this.dataSource = {};
     this.dataSource.min = 256;
     this.dataSource.max = -1;
-    this.dataSource.width = this.state.width;
-    this.dataSource.height = this.state.height;
-    this.dataSource.depth = this.state.depth;
+    this.dataSource.width = this.state.params.width;
+    this.dataSource.height = this.state.params.height;
+    this.dataSource.depth = this.state.params.depth;
     this.dataSource.points = [];
-    let input = document.getElementById("uploadRawFile");
-    let f = input.files[0];
-    console.log("file:", f);
-    let reader = new FileReader();
-    reader.readAsBinaryString(f);
-    reader.onload = e => {
-      let index = 0;
-      for (let i = 0; i < this.dataSource.depth; i++) {
-        for (let j = 0; j < this.dataSource.height; j++) {
-          for (let k = 0; k < this.dataSource.width; k++) {
-            let value = reader.result.charCodeAt(index);
-            index++;
-            if (value === 0) {
-              continue;
-            }
-            let p = {};
-            p.x = k;
-            p.y = j;
-            p.z = i;
-            p.value = value;
-            this.dataSource.points.push(p);
-            if (value < this.dataSource.min) {
-              this.dataSource.min = value;
-            }
-            if (value > this.dataSource.max) {
-              this.dataSource.max = value;
-            }
+    let index = 0;
+ //   console.log("data source 0 :", this.dataSource);
+    for (let i = 0; i < this.dataSource.depth; i++) {
+      for (let j = 0; j < this.dataSource.height; j++) {
+        for (let k = 0; k < this.dataSource.width; k++) {
+          let value = array[index];
+          index++;
+          if (value === 0) {
+            continue;
+          }
+          let p = {};
+          p.x = k;
+          p.y = j;
+          p.z = i;
+          p.value = value;
+          this.dataSource.points.push(p);
+          if (value < this.dataSource.min) {
+            this.dataSource.min = value;
+          }
+          if (value > this.dataSource.max) {
+            this.dataSource.max = value;
           }
         }
       }
-      this.addPoints();
-      console.log("data source:", this.dataSource);
-    };
+    }
+    this.addPoints();
+    console.log("data source:", this.dataSource);
   };
 
+  handleRawOnProgress = xhr => {
+    console.log(xhr.loaded / xhr.total * 100 + "% loaded");
+  };
+
+  hanldeRawOnError = xhr => {
+    console.log("failed:", xhr);
+  };
+
+  loadRaw = () => {
+    let loader = new THREE.FileLoader();
+    loader.setResponseType("arraybuffer");
+    loader.load(
+      "data/mri.raw",
+      this.handleRawOnload,
+      this.handleRawOnProgress,
+      this.hanldeRawOnError
+    );
+  };
   update = () => {};
 }
