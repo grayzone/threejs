@@ -1,5 +1,4 @@
 import React from "react";
-import { Upload, Button, Icon } from "antd";
 import * as THREE from "three";
 import Stats from "stats.js";
 import OrbitControls from "orbit-controls-es6";
@@ -56,12 +55,11 @@ export default class Tenth extends React.Component {
     };
     return (
       <div>
-        <Upload {...props}>
-          <Button>
-            <Icon type="upload" />
-          </Button>
-        </Upload>
-        <input type="file" id="uploadRawFile" />
+        <input
+          type="file"
+          id="uploadRawFile"
+          onChange={this.handleInputChange}
+        />
         <div ref="tenth" />
       </div>
     );
@@ -105,8 +103,8 @@ export default class Tenth extends React.Component {
   };
 
   camera = () => {
-    this.camera = new THREE.PerspectiveCamera(70, this.state.aspect, 1, 10000);
-    this.camera.position.set(0, 250, 1000);
+    this.camera = new THREE.PerspectiveCamera(100, this.state.aspect, 1, 10000);
+    this.camera.position.set(200, 0, 256);
   };
 
   light = () => {
@@ -130,7 +128,7 @@ export default class Tenth extends React.Component {
     this.addPlane();
     this.addHelper();
     this.addAxis();
-    this.addPoints();
+    //    this.addPoints();
   };
 
   addPlane = () => {
@@ -159,10 +157,46 @@ export default class Tenth extends React.Component {
     this.scene.add(this.axis);
   };
 
-  addPoints = () => {
+  handleInputChange = e => {
     this.loadDataSource();
+    //    this.addPoints();
   };
 
+  addPoints = () => {
+    //   this.loadDataSource();
+    console.log("points number:", this.dataSource.points.length);
+    if (this.dataSource.points.length === 0) {
+      return;
+    }
+
+    let geo = new THREE.BufferGeometry();
+    let material = new THREE.PointsMaterial({
+      vertexColors: THREE.VertexColors
+    });
+
+    let positions = new Float32Array(this.dataSource.points.length * 3);
+    let colors = new Float32Array(this.dataSource.points.length * 3);
+
+    for (let i = 0; i < this.dataSource.points.length; i++) {
+      positions[3 * i] = this.dataSource.points[i].x;
+      positions[3 * i + 1] = this.dataSource.points[i].y;
+      positions[3 * i + 2] = this.dataSource.points[i].z;
+      colors[3 * i] = this.dataSource.points[i].value / 255;
+      colors[3 * i + 1] = this.dataSource.points[i].value / 255;
+      colors[3 * i + 2] = this.dataSource.points[i].value / 255;
+    }
+
+    console.log("colors:", colors);
+
+    geo.addAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geo.addAttribute("color", new THREE.BufferAttribute(colors, 3));
+
+    geo.computeBoundingSphere();
+
+    let mesh = new THREE.Points(geo, material);
+    mesh.castShadow = true;
+    this.scene.add(mesh);
+  };
   loadDataSource = () => {
     if (
       !window.File ||
@@ -173,36 +207,35 @@ export default class Tenth extends React.Component {
       console.error("The File APIs are not fully supported in this browser.");
       return;
     }
-    let reader = new FileReader();
+
+    this.dataSource = {};
+    this.dataSource.min = 256;
+    this.dataSource.max = -1;
+    this.dataSource.width = 200;
+    this.dataSource.height = 160;
+    this.dataSource.depth = 160;
+    this.dataSource.points = [];
     let input = document.getElementById("uploadRawFile");
-    input.onchange = () => {
-      let f = input.files[0];
-      console.log("file:", f);
-      reader.readAsBinaryString(f);
-    };
+    let f = input.files[0];
+    console.log("file:", f);
+    let reader = new FileReader();
+    reader.readAsBinaryString(f);
     reader.onload = e => {
-      this.dataSource = {};
-      this.dataSource.min = 256;
-      this.dataSource.max = -1;
-      this.dataSource.width = 200;
-      this.dataSource.height = 160;
-      this.dataSource.depth = 160;
-      this.dataSource.points = [];
       let index = 0;
       for (let i = 0; i < this.dataSource.depth; i++) {
         for (let j = 0; j < this.dataSource.height; j++) {
           for (let k = 0; k < this.dataSource.width; k++) {
+            let value = reader.result.charCodeAt(index);
+            index++;
+            if (value === 0) {
+              continue;
+            }
             let p = {};
             p.x = k;
             p.y = j;
             p.z = i;
-            let value = reader.result.charCodeAt(index);
-            index++;
             p.value = value;
             this.dataSource.points.push(p);
-            if (value === 0) {
-              continue;
-            }
             if (value < this.dataSource.min) {
               this.dataSource.min = value;
             }
@@ -212,6 +245,7 @@ export default class Tenth extends React.Component {
           }
         }
       }
+      this.addPoints();
       console.log("data source:", this.dataSource);
     };
   };
