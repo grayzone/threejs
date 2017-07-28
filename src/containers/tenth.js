@@ -11,9 +11,9 @@ export default class Tenth extends React.Component {
     splinePointLength: 4,
     positions: [],
     params: {
-      helper: true,
-      plane: true,
-      axis: true
+      width: 200,
+      height: 160,
+      depth: 160
     }
   };
 
@@ -50,9 +50,6 @@ export default class Tenth extends React.Component {
   };
 
   render = () => {
-    const props = {
-      name: "file"
-    };
     return (
       <div>
         <input
@@ -211,9 +208,9 @@ export default class Tenth extends React.Component {
     this.dataSource = {};
     this.dataSource.min = 256;
     this.dataSource.max = -1;
-    this.dataSource.width = 200;
-    this.dataSource.height = 160;
-    this.dataSource.depth = 160;
+    this.dataSource.width = this.state.width;
+    this.dataSource.height = this.state.height;
+    this.dataSource.depth = this.state.depth;
     this.dataSource.points = [];
     let input = document.getElementById("uploadRawFile");
     let f = input.files[0];
