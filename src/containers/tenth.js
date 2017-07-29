@@ -86,6 +86,7 @@ export default class Tenth extends React.Component {
     gui.domElement.style.position = "absolute";
     gui.domElement.style.top = "50px";
     gui.domElement.style.left = "600px";
+    gui.domElement.style.minHeight = "100px";
 
     this.addToContainer(gui.domElement);
   };

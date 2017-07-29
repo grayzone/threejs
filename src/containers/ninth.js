@@ -84,8 +84,10 @@ export default class Ninth extends React.Component {
   datGUI = () => {
     let gui = new dat.GUI();
     gui.domElement.style.position = "absolute";
+    //   gui.domElement.style.position = "relative";
     gui.domElement.style.top = "50px";
     gui.domElement.style.left = "600px";
+    gui.domElement.style.minHeight = "100px";
 
     gui.add(this.state.params, "helper");
     gui.add(this.state.params, "plane");
