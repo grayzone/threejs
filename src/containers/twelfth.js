@@ -7,7 +7,7 @@ import * as dat from "dat.gui/build/dat.gui.js";
 export default class Twelfth extends React.Component {
   state = {
     aspect: this.props.width / this.props.height,
-    segments: 100,
+    segments: 1000,
     points: [
       new THREE.Vector3(-40.2, -34.7, 0),
       new THREE.Vector3(-60.8, -70.8, 0),
@@ -83,8 +83,8 @@ export default class Twelfth extends React.Component {
     this.renderer.setClearColor(0x050505);
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setSize(this.props.width, this.props.height);
-    this.renderer.gammaInput = true;
-    this.renderer.gammaOutput = true;
+    //    this.renderer.gammaInput = true;
+    //    this.renderer.gammaOutput = true;
 
     this.addToContainer(this.renderer.domElement);
   };
@@ -102,6 +102,7 @@ export default class Twelfth extends React.Component {
   camera = () => {
     this.camera = new THREE.PerspectiveCamera(100, this.state.aspect, 1, 10000);
     this.camera.position.set(0, 0, 100);
+    this.camera.updateMatrixWorld();
   };
 
   light = () => {
@@ -118,14 +119,18 @@ export default class Twelfth extends React.Component {
   };
 
   objects = () => {
+    this.generatePoints();
     //   this.addPlane();
-    this.addHelper();
-    this.addAxis();
-    this.addEdges();
+    //   this.addHelper();
+    //   this.addAxis();
+    //   this.addEdges();
 
     this.addCurve();
+    this.addShape();
     //    this.addFaces();
     this.addCrossPoints();
+
+    this.checkIntersects();
   };
 
   addPlane = () => {
@@ -154,20 +159,36 @@ export default class Twelfth extends React.Component {
     this.scene.add(this.axis);
   };
 
-  addCurve = () => {
+  generatePoints = () => {
     let curve = new THREE.CatmullRomCurve3(this.state.points);
     curve.closed = true;
-    var geo = new THREE.Geometry();
     this.pointsOnCurve = curve.getPoints(this.state.segments);
-    geo.vertices = this.pointsOnCurve;
+  };
 
+  addCurve = () => {
+    var geo = new THREE.Geometry();
+    geo.vertices = this.pointsOnCurve;
     let material = new THREE.LineBasicMaterial();
 
-    let curveObj = new THREE.Line(geo, material);
-    this.scene.add(curveObj);
+    this.curveObj = new THREE.Line(geo, material);
+    geo.computeBoundingBox();
+    this.scene.add(this.curveObj);
+  };
 
-    //   console.log("vertex length:", geo.vertices.length);
-    //   console.log("vertex:", geo.vertices);
+  addShape = () => {
+    let shape = new THREE.Shape();
+    shape.moveTo(this.pointsOnCurve[0].x, this.pointsOnCurve[0].y);
+    for (let i = 1; i < this.pointsOnCurve.length; i++) {
+      shape.lineTo(this.pointsOnCurve[i].x, this.pointsOnCurve[i].y);
+    }
+    shape.lineTo(this.pointsOnCurve[0].x, this.pointsOnCurve[0].y);
+    let shapeGeo = new THREE.ShapeGeometry(shape);
+    let shapeMaterial = new THREE.MeshBasicMaterial({
+      opacity: 0,
+      color: "orange"
+    });
+    this.shapeObj = new THREE.Mesh(shapeGeo, shapeMaterial);
+    this.scene.add(this.shapeObj);
   };
 
   addFaces = () => {
@@ -212,19 +233,57 @@ export default class Twelfth extends React.Component {
   };
 
   addCrossPoints = () => {
-    let geo = new THREE.Geometry();
+    this.crossPoints = [];
+
     for (let i = 0; i <= 10; i++) {
-      for (let j = 0; j <=10; j++) {
-        let p = new THREE.Vector3(20 * j - 100, 100-20 * i , 0);
+      for (let j = 0; j <= 10; j++) {
+        let geo = new THREE.Geometry();
+        let p = new THREE.Vector3(20 * j - 100, 100 - 20 * i, 0);
         geo.vertices.push(p);
+        let material = new THREE.PointsMaterial();
+        let crossPoint = new THREE.Points(geo, material);
+        this.scene.add(crossPoint);
+        this.crossPoints.push(crossPoint);
       }
     }
+  };
 
-    let material = new THREE.PointsMaterial();
-
-    let crossPoints = new THREE.Points(geo, material);
-
-    this.scene.add(crossPoints);
+  checkIntersects = () => {
+    let rayCaster = new THREE.Raycaster();
+    for (let i = 0; i <= 10; i++) {
+      for (let j = 0; j <= 10; j++) {
+        let position = new THREE.Vector2(
+          (20 * j - 100) / 100,
+          (100 - 20 * i) / 100
+        );
+        rayCaster.setFromCamera(position, this.camera);
+        let objs = [];
+        //     objs = this.crossPoints;
+        objs.push(this.shapeObj);
+        //objs.push(this.curveObj);
+        //      objs.push(this.crossPoints);
+        var intersects = rayCaster.intersectObjects(objs, true);
+        if (intersects.length === 0) {
+          continue;
+        }
+        console.log(
+          "x:",
+          20 * j - 100,
+          ",y:",
+          100 - 20 * i,
+          ",i:",
+          i,
+          ",j:",
+          j,
+          "intersects number:",
+          intersects.length,
+          intersects
+        );
+        let index = i * 11 + j;
+        this.crossPoints[index].material.color.set(0xffff00);
+        this.crossPoints[index].material.size = 5;
+      }
+    }
   };
 
   update = () => {};
