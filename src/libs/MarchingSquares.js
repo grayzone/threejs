@@ -2,12 +2,12 @@ import * as THREE from "three";
 
 export default class MarchingSquares {
   constructor(scene, position, resolution, iso, data) {
-    console.log("data:", data);
     this.getVertex(position.x, position.y, position.z, resolution);
     this.getMidPoint(position.x, position.y, position.z, resolution);
     this.scene = scene;
     this.iso = iso;
     this.data = data;
+    this.resolution = resolution;
   }
   getVertex = (x, y, z, length) => {
     this.vertex = [
@@ -25,6 +25,58 @@ export default class MarchingSquares {
       new THREE.Vector3(x, y + length / 2, z)
     ];
   };
+
+  // -------------------v1-----------v---------------v2-------------
+  getIntero = (start, end) => {
+    return this.resolution * (start - this.iso) / (start - end);
+  };
+
+  getMiddlePoint = (v, e) => {
+    let p = this.vertex[v];
+    let result = { x: 0, y: 0, z: p.z };
+    if (v === 0 && e === 0) {
+      result.y = p.y;
+      result.x = p.x + this.getIntero(this.data[0], this.data[1]);
+      return result;
+    }
+    if (v === 0 && e === 3) {
+      result.x = p.x;
+      result.y = p.y + this.getIntero(this.data[0], this.data[3]);
+      return result;
+    }
+    if (v === 1 && e === 0) {
+      result.y = p.y;
+      result.x = p.x - this.getIntero(this.data[1], this.data[0]);
+      return result;
+    }
+    if (v === 1 && e === 1) {
+      result.x = p.x;
+      result.y = p.y + this.getIntero(this.data[1], this.data[2]);
+      return result;
+    }
+    if (v === 2 && e === 1) {
+      result.x = p.x;
+      result.y = p.y - this.getIntero(this.data[2], this.data[1]);
+      return result;
+    }
+    if (v === 2 && e === 2) {
+      result.y = p.y;
+      result.x = p.x - this.getIntero(this.data[2], this.data[3]);
+      return result;
+    }
+    if (v === 3 && e === 2) {
+      result.y = p.y;
+      result.x = p.x + this.getIntero(this.data[3], this.data[2]);
+      return result;
+    }
+    if (v === 3 && e === 3) {
+      result.x = p.x;
+      result.y = p.y - this.getIntero(this.data[3], this.data[0], this.iso);
+      return result;
+    }
+    return result;
+  };
+
   addIntersection = vertices => {
     let geo = new THREE.Geometry();
     geo.vertices = vertices;
@@ -37,16 +89,16 @@ export default class MarchingSquares {
 
   checkISO = data => {
     this.result = 0;
-    if (data[0] < this.iso) {
+    if (data[0] > this.iso) {
       this.result |= 1;
     }
-    if (data[1] < this.iso) {
+    if (data[1] > this.iso) {
       this.result |= 2;
     }
-    if (data[2] < this.iso) {
+    if (data[2] > this.iso) {
       this.result |= 4;
     }
-    if (data[3] < this.iso) {
+    if (data[3] > this.iso) {
       this.result |= 8;
     }
   };
@@ -58,82 +110,118 @@ export default class MarchingSquares {
 
   cases = index => {
     let intersects = [];
+    let start = null;
+    let end = null;
     switch (index) {
       case 0:
         // 0000
         break;
       case 1:
         // 0001
-        intersects = [this.midPoint[0], this.midPoint[3]];
+        start = this.getMiddlePoint(0, 0);
+        end = this.getMiddlePoint(0, 3);
+        intersects = [start, end];
         this.addIntersection(intersects);
         break;
       case 2:
         // 0010
-        intersects = [this.midPoint[0], this.midPoint[1]];
+        start = this.getMiddlePoint(1, 0);
+        end = this.getMiddlePoint(1, 1);
+        intersects = [start, end];
         this.addIntersection(intersects);
         break;
       case 3:
         // 0011
-        intersects = [this.midPoint[1], this.midPoint[3]];
+        start = this.getMiddlePoint(0, 3);
+        end = this.getMiddlePoint(1, 1);
+        intersects = [start, end];
         this.addIntersection(intersects);
         break;
       case 4:
         // 0100
-        intersects = [this.midPoint[1], this.midPoint[2]];
+        start = this.getMiddlePoint(2, 1);
+        end = this.getMiddlePoint(2, 2);
+        intersects = [start, end];
         this.addIntersection(intersects);
         break;
       case 5:
         // 0101
-        intersects = [this.midPoint[0], this.midPoint[1]];
+        start = this.getMiddlePoint(0, 0);
+        end = this.getMiddlePoint(0, 3);
+        intersects = [start, end];
         this.addIntersection(intersects);
-        intersects = [this.midPoint[2], this.midPoint[3]];
+
+        start = this.getMiddlePoint(2, 1);
+        end = this.getMiddlePoint(2, 2);
+        intersects = [start, end];
         this.addIntersection(intersects);
         break;
       case 6:
         // 0110
-        intersects = [this.midPoint[0], this.midPoint[2]];
+        start = this.getMiddlePoint(1, 0);
+        end = this.getMiddlePoint(2, 2);
+        intersects = [start, end];
         this.addIntersection(intersects);
         break;
       case 7:
         // 0111
-        intersects = [this.midPoint[2], this.midPoint[3]];
+        start = this.getMiddlePoint(3, 2);
+        end = this.getMiddlePoint(3, 3);
+        intersects = [start, end];
         this.addIntersection(intersects);
         break;
       case 8:
         // 1000
-        intersects = [this.midPoint[2], this.midPoint[3]];
+        start = this.getMiddlePoint(3, 3);
+        end = this.getMiddlePoint(3, 2);
+        intersects = [start, end];
         this.addIntersection(intersects);
         break;
       case 9:
         // 1001
-        intersects = [this.midPoint[0], this.midPoint[2]];
+        start = this.getMiddlePoint(0, 0);
+        end = this.getMiddlePoint(3, 2);
+        intersects = [start, end];
         this.addIntersection(intersects);
         break;
       case 10:
         // 1010
-        intersects = [this.midPoint[0], this.midPoint[3]];
+        start = this.getMiddlePoint(1, 0);
+        end = this.getMiddlePoint(3, 3);
+        intersects = [start, end];
         this.addIntersection(intersects);
-        intersects = [this.midPoint[1], this.midPoint[2]];
+
+        start = this.getMiddlePoint(1, 1);
+        end = this.getMiddlePoint(3, 2);
+        intersects = [start, end];
         this.addIntersection(intersects);
         break;
       case 11:
         // 1011
-        intersects = [this.midPoint[1], this.midPoint[2]];
+        start = this.getMiddlePoint(1, 1);
+        end = this.getMiddlePoint(3, 2);
+        intersects = [start, end];
         this.addIntersection(intersects);
         break;
       case 12:
         // 1100
-        intersects = [this.midPoint[1], this.midPoint[3]];
+        start = this.getMiddlePoint(2, 1);
+        end = this.getMiddlePoint(3, 3);
+        intersects = [start, end];
         this.addIntersection(intersects);
         break;
       case 13:
         // 1101
-        intersects = [this.midPoint[0], this.midPoint[1]];
+        start = this.getMiddlePoint(0, 0);
+        end = this.getMiddlePoint(2, 1);
+        intersects = [start, end];
         this.addIntersection(intersects);
         break;
       case 14:
         // 1110
-        intersects = [this.midPoint[0], this.midPoint[3]];
+        start = this.getMiddlePoint(1, 0);
+        end = this.getMiddlePoint(3, 3);
+        intersects = [start, end];
         this.addIntersection(intersects);
         break;
       case 15:
