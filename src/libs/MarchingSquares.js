@@ -1,12 +1,14 @@
 import * as THREE from "three";
 
 export default class MarchingSquares {
-  constructor(scene, x, y, z, resolution) {
-    this.getVertex(x, y, z, resolution);
-    this.getMidPoint(x, y, z, resolution);
+  constructor(scene, position, resolution, iso, data) {
+    console.log("data:", data);
+    this.getVertex(position.x, position.y, position.z, resolution);
+    this.getMidPoint(position.x, position.y, position.z, resolution);
     this.scene = scene;
+    this.iso = iso;
+    this.data = data;
   }
-
   getVertex = (x, y, z, length) => {
     this.vertex = [
       new THREE.Vector3(x, y, z),
@@ -33,115 +35,112 @@ export default class MarchingSquares {
     this.scene.add(dashLine);
   };
 
-  //0001
-  case01 = () => {
-    //    this.addVertexPoint([this.vertex[0]]);
-    let intersects = [this.midPoint[0], this.midPoint[3]];
-    //   this.addMiddlePoint(intersects);
-    this.addIntersection(intersects);
+  checkISO = data => {
+    this.result = 0;
+    if (data[0] < this.iso) {
+      this.result |= 1;
+    }
+    if (data[1] < this.iso) {
+      this.result |= 2;
+    }
+    if (data[2] < this.iso) {
+      this.result |= 4;
+    }
+    if (data[3] < this.iso) {
+      this.result |= 8;
+    }
   };
 
-  //0010
-  case02 = (vertexs, middle) => {
-    //    this.addVertexPoint([vertexs[1]]);
-    let intersectPoints = [middle[0], middle[1]];
-    //    this.addMiddlePoint(intersectPoints);
-    this.addIntersection(intersectPoints);
-  };
+  render() {
+    this.checkISO(this.data);
+    this.cases(this.result);
+  }
 
-  // 0011
-  case03 = (vertexs, middle) => {
-    //    this.addVertexPoint([vertexs[0], vertexs[1]]);
-    let intersectPoints = [middle[1], middle[3]];
-    //    this.addMiddlePoint(intersectPoints);
-    this.addIntersection(intersectPoints);
-  };
-
-  // 0100
-  case04 = (vertexs, middle) => {
-    //    this.addVertexPoint([vertexs[2]]);
-    let intersectPoints = [middle[1], middle[2]];
-    //    this.addMiddlePoint(intersectPoints);
-    this.addIntersection(intersectPoints);
-  };
-  // 0101
-  case05 = (vertexs, middle) => {
-    //    this.addVertexPoint([vertexs[0], vertexs[2]]);
-    let intersectPoints1 = [middle[0], middle[1]];
-    //    this.addMiddlePoint(intersectPoints1);
-    this.addIntersection(intersectPoints1);
-    let intersectPoints2 = [middle[2], middle[3]];
-    //    this.addMiddlePoint(intersectPoints2);
-    this.addIntersection(intersectPoints2);
-  };
-  // 0110
-  case06 = (vertexs, middle) => {
-    //    this.addVertexPoint([vertexs[1], vertexs[2]]);
-    let intersectPoints1 = [middle[0], middle[2]];
-    //    this.addMiddlePoint(intersectPoints1);
-    this.addIntersection(intersectPoints1);
-  };
-  // 0111
-  case07 = (vertexs, middle) => {
-    //    this.addVertexPoint([vertexs[0], vertexs[1], vertexs[2]]);
-    let intersectPoints1 = [middle[2], middle[3]];
-    //    this.addMiddlePoint(intersectPoints1);
-    this.addIntersection(intersectPoints1);
-  };
-  // 1000
-  case08 = (vertexs, middle) => {
-    //    this.addVertexPoint([vertexs[3]]);
-    let intersectPoints1 = [middle[2], middle[3]];
-    //    this.addMiddlePoint(intersectPoints1);
-    this.addIntersection(intersectPoints1);
-  };
-  // 1001
-  case09 = (vertexs, middle) => {
-    //    this.addVertexPoint([vertexs[0], vertexs[3]]);
-    let intersectPoints1 = [middle[0], middle[2]];
-    //    this.addMiddlePoint(intersectPoints1);
-    this.addIntersection(intersectPoints1);
-  };
-  // 1010
-  case10 = (vertexs, middle) => {
-    //    this.addVertexPoint([vertexs[1], vertexs[3]]);
-    let intersectPoints1 = [middle[0], middle[3]];
-    //    this.addMiddlePoint(intersectPoints1);
-    this.addIntersection(intersectPoints1);
-    let intersectPoints2 = [middle[1], middle[2]];
-    //    this.addMiddlePoint(intersectPoints2);
-    this.addIntersection(intersectPoints2);
-  };
-  // 1011
-  case11 = (vertexs, middle) => {
-    //    this.addVertexPoint([vertexs[0], vertexs[1], vertexs[3]]);
-    let intersectPoints1 = [middle[1], middle[2]];
-    //    this.addMiddlePoint(intersectPoints1);
-    this.addIntersection(intersectPoints1);
-  };
-  // 1100
-  case12 = (vertexs, middle) => {
-    //    this.addVertexPoint([vertexs[2], vertexs[3]]);
-    let intersectPoints1 = [middle[1], middle[3]];
-    //    this.addMiddlePoint(intersectPoints1);
-    this.addIntersection(intersectPoints1);
-  };
-  // 1101
-  case13 = (vertexs, middle) => {
-    //    this.addVertexPoint([vertexs[0], vertexs[2], vertexs[3]]);
-    let intersectPoints1 = [middle[0], middle[1]];
-    //    this.addMiddlePoint(intersectPoints1);
-    this.addIntersection(intersectPoints1);
-  };
-  // 1110
-  case14 = (vertexs, middle) => {
-    //    this.addVertexPoint([vertexs[1], vertexs[2], vertexs[3]]);
-    let intersectPoints1 = [middle[0], middle[3]];
-    //    this.addMiddlePoint(intersectPoints1);
-    this.addIntersection(intersectPoints1);
-  };
-  // 1111
-  case15 = (vertexs, middle) => {
-    //    this.addVertexPoint(vertexs);
+  cases = index => {
+    let intersects = [];
+    switch (index) {
+      case 0:
+        // 0000
+        break;
+      case 1:
+        // 0001
+        intersects = [this.midPoint[0], this.midPoint[3]];
+        this.addIntersection(intersects);
+        break;
+      case 2:
+        // 0010
+        intersects = [this.midPoint[0], this.midPoint[1]];
+        this.addIntersection(intersects);
+        break;
+      case 3:
+        // 0011
+        intersects = [this.midPoint[1], this.midPoint[3]];
+        this.addIntersection(intersects);
+        break;
+      case 4:
+        // 0100
+        intersects = [this.midPoint[1], this.midPoint[2]];
+        this.addIntersection(intersects);
+        break;
+      case 5:
+        // 0101
+        intersects = [this.midPoint[0], this.midPoint[1]];
+        this.addIntersection(intersects);
+        intersects = [this.midPoint[2], this.midPoint[3]];
+        this.addIntersection(intersects);
+        break;
+      case 6:
+        // 0110
+        intersects = [this.midPoint[0], this.midPoint[2]];
+        this.addIntersection(intersects);
+        break;
+      case 7:
+        // 0111
+        intersects = [this.midPoint[2], this.midPoint[3]];
+        this.addIntersection(intersects);
+        break;
+      case 8:
+        // 1000
+        intersects = [this.midPoint[2], this.midPoint[3]];
+        this.addIntersection(intersects);
+        break;
+      case 9:
+        // 1001
+        intersects = [this.midPoint[0], this.midPoint[2]];
+        this.addIntersection(intersects);
+        break;
+      case 10:
+        // 1010
+        intersects = [this.midPoint[0], this.midPoint[3]];
+        this.addIntersection(intersects);
+        intersects = [this.midPoint[1], this.midPoint[2]];
+        this.addIntersection(intersects);
+        break;
+      case 11:
+        // 1011
+        intersects = [this.midPoint[1], this.midPoint[2]];
+        this.addIntersection(intersects);
+        break;
+      case 12:
+        // 1100
+        intersects = [this.midPoint[1], this.midPoint[3]];
+        this.addIntersection(intersects);
+        break;
+      case 13:
+        // 1101
+        intersects = [this.midPoint[0], this.midPoint[1]];
+        this.addIntersection(intersects);
+        break;
+      case 14:
+        // 1110
+        intersects = [this.midPoint[0], this.midPoint[3]];
+        this.addIntersection(intersects);
+        break;
+      case 15:
+        // 1111
+        break;
+      default:
+        break;
+    }
   };
 }
