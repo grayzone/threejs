@@ -14,6 +14,7 @@ import Tenth from "./tenth";
 import Eleventh from "./eleventh";
 import Twelfth from "./twelfth";
 import Thirteenth from "./thirteenth";
+import Fourteenth from "./fourteenth";
 
 export default class App extends React.Component {
   render() {
@@ -21,7 +22,7 @@ export default class App extends React.Component {
     let height = 512;
     const TabPane = Tabs.TabPane;
     return (
-      <Tabs tabPosition="left" defaultActiveKey="13">
+      <Tabs tabPosition="left" defaultActiveKey="14">
         <TabPane tab="1" key="1">
           <First width={width} height={height} />
         </TabPane>
@@ -61,7 +62,9 @@ export default class App extends React.Component {
         <TabPane tab="13" key="13">
           <Thirteenth width={width} height={height} />
         </TabPane>
-        
+        <TabPane tab="14" key="14">
+          <Fourteenth width={width} height={height} />
+        </TabPane>
       </Tabs>
     );
   }
