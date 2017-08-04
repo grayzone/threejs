@@ -84,10 +84,11 @@ export default class Fourteenth extends React.Component {
 
   camera = () => {
     this.camera = new THREE.OrthographicCamera(
-      -this.props.width / 2,
-      this.props.width / 2,
-      this.props.height / 2,
-      -this.props.height / 2,
+      0,
+      this.props.width,
+      0,
+      -this.props.height,
+      // 0,
       -500,
       1000
     );
@@ -106,11 +107,11 @@ export default class Fourteenth extends React.Component {
 
   addVertex = () => {
     let points = [
-      new THREE.Vector3(-256, -256, 0),
-      new THREE.Vector3(-256, 256, 0),
-      new THREE.Vector3(256, 256, 0),
-      new THREE.Vector3(256, -256, 0),
-      new THREE.Vector3(0, 0, 0)
+      new THREE.Vector3(0, 0, 0),
+      //      new THREE.Vector3(0, 512, 0),
+      //      new THREE.Vector3(512, 512, 0),
+      //      new THREE.Vector3(512, 0, 0),
+      new THREE.Vector3(256, -256, 0)
     ];
     let geo = new THREE.Geometry();
     geo.vertices = points;
@@ -122,20 +123,35 @@ export default class Fourteenth extends React.Component {
     this.scene.add(p);
   };
 
-  addImage = () => {
-    let spriteMap = null;
+  onImageLoad = textTure => {
     let geo = new THREE.PlaneGeometry(this.props.width, this.props.height);
-    spriteMap = new THREE.ImageUtils.loadTexture("data/ct.png");
     let spriteMaterial = new THREE.MeshBasicMaterial({
-      map: spriteMap,
+      map: textTure,
       color: 0xffffff
     });
-
     let sprite = new THREE.Mesh(geo, spriteMaterial);
+    sprite.position.x = 256;
+    sprite.position.y = -256;
 
     this.scene.add(sprite);
-    console.log("image data:", spriteMap.image);
-    this.getImageInfo(spriteMap.image);
+  };
+
+  onImageProgress = xhr => {
+    console.log(xhr.loaded / xhr.total * 100 + "% loaded");
+  };
+
+  onImageError = xhr => {
+    console.log("image load failed, ", xhr);
+  };
+
+  addImage = () => {
+    let loader = new THREE.TextureLoader();
+    loader.load(
+      "data/ct.png",
+      this.onImageLoad,
+      this.onImageProgress,
+      this.onImageError
+    );
   };
 
   getImageInfo = image => {
