@@ -11,9 +11,12 @@ export default class Fifteenth extends React.Component {
     params: {
       width: 200,
       height: 160,
-      depth: 160
+      depth: 80,
+      iso: 1
     },
-    data: []
+    data: [],
+    left: { x: 1000, y: 0 },
+    right: { x: -1000, y: 0 }
   };
 
   componentDidMount = () => {
@@ -27,7 +30,7 @@ export default class Fifteenth extends React.Component {
     this.datGUI();
     this.stats();
 
-    //   this.control();
+    this.control();
 
     this.animate();
   };
@@ -85,22 +88,37 @@ export default class Fifteenth extends React.Component {
     gui.domElement.style.left = "600px";
     gui.domElement.style.minHeight = "100px";
 
-    gui.add(this.state.params, "depth", 1, this.state.params.depth);
+    //  gui.add(this.state.params, "depth", 1, this.state.params.depth);
+    var depthControl = gui
+      .add(this.state.params, "depth")
+      .min(1)
+      .max(160)
+      .step(1);
+    depthControl.onChange(value => {
+      //    console.log("depth change:", value);
+      this.showSlice();
+    });
+    let isoControl = gui.add(this.state.params, "iso").min(1).max(256).step(1);
+    isoControl.onChange(value => {
+      //  console.log("iso change:", value);
+      this.showSlice();
+    });
 
     this.addToContainer(gui.domElement);
   };
 
   camera = () => {
     this.camera = new THREE.OrthographicCamera(
-      0,
-      this.props.width,
-      0,
-      -this.props.height,
-      // 0,
-      -500,
+      -this.props.width / 2,
+      this.props.width / 2,
+      //0,
+      this.props.height / 2,
+      -this.props.height / 2,
+      -100,
       1000
     );
-    this.camera.position.set(0, 0, 100);
+    this.camera.position.set(0, 0, 256);
+    //   this.camera.lookAt(this.scene.position);
   };
 
   light = () => {
@@ -110,40 +128,129 @@ export default class Fifteenth extends React.Component {
 
   objects = () => {
     this.addImage();
-    this.addVertex();
+    //   this.addVertex();
   };
-
+  /*
   addVertex = () => {
-    let points = [
-      new THREE.Vector3(0, 0, 0),
-      //      new THREE.Vector3(0, 512, 0),
-      //      new THREE.Vector3(512, 512, 0),
-      //      new THREE.Vector3(512, 0, 0),
-      new THREE.Vector3(256, -256, 0)
-    ];
-    let geo = new THREE.Geometry();
-    geo.vertices = points;
+    let points = new Float32Array([
+      0,
+      0,
+      0,
+      256,
+      256,
+      0,
+      -256,
+      -256,
+      0,
+      256,
+      -256,
+      0,
+      -256,
+      256,
+      0,
+      256,
+      0,
+      0,
+      -256,
+      0,
+      0,
+      0,
+      256,
+      0,
+      0,
+      -256,
+      0
+    ]);
+    this.addPoints(points);
+  };
+*/
+  addPoints = points => {
+    let geo = new THREE.BufferGeometry();
     let material = new THREE.PointsMaterial({
       size: 3,
       color: 0xffff00
     });
-    let p = new THREE.Points(geo, material);
-    this.scene.add(p);
+    geo.addAttribute("position", new THREE.BufferAttribute(points, 3));
+    let pointsObj = new THREE.Points(geo, material);
+    this.pointGroup.add(pointsObj);
   };
 
-  getSliceData = (obj, depth) => {
+  addMarks = () => {
+    let data = this.sliceData();
+    if (data.length === 0) {
+      return;
+    }
+    let index = 0;
+    for (let j = 0; j < this.state.params.height; j++) {
+      for (let i = 0; i < this.state.params.width; i++) {
+        let v = data[index];
+        index++;
+        if (v > this.state.params.iso) {
+          let p = new Float32Array([i - 100, j - 80, 0]);
+          //      console.log("x:", i, ",y:", j, ",v:,", v);
+
+          this.addPoints(p);
+          return;
+        }
+      }
+    }
+  };
+
+  addLeftAndRight = () => {
+    let p = new Float32Array([
+      this.state.left.x - 100,
+      this.state.left.y - 80,
+      0,
+      this.state.right.x - 100,
+      this.state.right.y - 80,
+      0
+    ]);
+    console.log("left and right:", p);
+    this.addPoints(p);
+  };
+
+  getDataByDepth = (obj, depth) => {
+    if (obj.length === 0) {
+      return [];
+    }
     let startPos =
-      (Math.round(depth) - 1) *
-      this.state.params.width *
-      this.state.params.height;
+      (depth - 1) * this.state.params.width * this.state.params.height;
     return obj.slice(
       startPos,
       startPos + this.state.params.width * this.state.params.height
     );
   };
 
-  loadSlice = () => {
-    return this.getSliceData(this.state.data, this.state.params.depth);
+  sliceData = () => {
+    let data = this.getDataByDepth(this.state.data, this.state.params.depth);
+    for (let i = 0; i < data.length; i++) {
+      if (data[i] < this.state.params.iso) {
+        data[i] = 0;
+      }
+    }
+    let index = 0;
+    for (let j = 0; j < this.state.params.height; j++) {
+      for (let i = 0; i < this.state.params.width; i++) {
+        let value = data[index];
+        index++;
+        if (value > 0) {
+          let left = this.state.left;
+          let right = this.state.right;
+          if (i < left.x) {
+            left.x = i;
+            left.y = j;
+            this.setState({ left });
+          }
+          if (i > right.x) {
+            right.x = i;
+            right.y = j;
+            this.setState({ right });
+          }
+        }
+      }
+    }
+
+    return data;
   };
 
   showSlice = () => {
@@ -151,12 +258,29 @@ export default class Fifteenth extends React.Component {
       return;
     }
 
-    if (this.sliceObj !== undefined) {
-      this.scene.remove(this.sliceObj);
+    if (this.sliceGroup !== undefined) {
+      console.log("slice group:", this.sliceGroup.children.length);
+      this.sliceGroup.remove(this.sliceGroup.children[0]);
     }
 
+    if (this.pointGroup !== undefined) {
+      console.log("point group:", this.pointGroup.children.length);
+      for (let i = 0; i < this.pointGroup.children.length; i++) {
+        this.pointGroup.remove(this.pointGroup.children[i]);
+      }
+    }
+
+    this.setState({
+      left: { x: 1000, y: 0 },
+      right: { x: -1000, y: 0 }
+    });
+
+    //   console.log("scene group:", this.scene.children.length);
+    //   console.log("slice group:", this.sliceGroup.children.length);
+    //   console.log("point group:", this.pointGroup.children.length);
+
     let textTure = new THREE.DataTexture(
-      this.loadSlice(),
+      this.sliceData(),
       this.state.params.width,
       this.state.params.height
     );
@@ -164,21 +288,22 @@ export default class Fifteenth extends React.Component {
     textTure.format = THREE.LuminanceFormat;
     textTure.type = THREE.UnsignedByteType;
 
-    let geo = new THREE.PlaneGeometry(this.props.width, this.props.height);
-
-    //    geo.addAtribute("position", new THREE.Uint8Attribute(s, 1));
+    let geo = new THREE.PlaneGeometry(
+      this.state.params.width,
+      this.state.params.height
+    );
 
     let spriteMaterial = new THREE.MeshBasicMaterial({
-      map: textTure
+      map: textTure,
       //     color: 0xffffff,
-      //     transparent: true
+      transparent: true
     });
     textTure.needsUpdate = true;
-    this.sliceObj = new THREE.Mesh(geo, spriteMaterial);
-    this.sliceObj.position.x = 256;
-    this.sliceObj.position.y = -256;
+    let sliceObj = new THREE.Mesh(geo, spriteMaterial);
+    this.sliceGroup.add(sliceObj);
 
-    this.scene.add(this.sliceObj);
+    this.addMarks();
+    this.addLeftAndRight();
   };
 
   handleRawOnload = data => {
@@ -186,6 +311,12 @@ export default class Fifteenth extends React.Component {
     this.setState({
       data: array
     });
+
+    this.sliceGroup = new THREE.Object3D();
+    this.scene.add(this.sliceGroup);
+
+    this.pointGroup = new THREE.Object3D();
+    this.scene.add(this.pointGroup);
 
     this.showSlice();
   };
@@ -210,6 +341,6 @@ export default class Fifteenth extends React.Component {
   };
 
   update = () => {
-    this.showSlice();
+    //   this.showSlice();
   };
 }
