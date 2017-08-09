@@ -3,18 +3,19 @@ import * as THREE from "three";
 import Stats from "stats.js";
 import OrbitControls from "orbit-controls-es6";
 import * as dat from "dat.gui/build/dat.gui.js";
-//import MarchingSquares from "../libs/MarchingSquares";
+import MarchingSquares from "../libs/MarchingSquares";
 
 export default class Fifteenth extends React.Component {
   state = {
     aspect: this.props.width / this.props.height,
     params: {
-      width: 200,
-      height: 160,
       depth: 80,
-      iso: 1
+      iso: 1,
+      marchingSquare: false
     },
     data: [],
+    width: 200,
+    height: 160,
     left: { x: 1000, y: 0 },
     right: { x: -1000, y: 0 }
   };
@@ -30,7 +31,7 @@ export default class Fifteenth extends React.Component {
     this.datGUI();
     this.stats();
 
-    this.control();
+    // this.control();
 
     this.animate();
   };
@@ -104,10 +105,16 @@ export default class Fifteenth extends React.Component {
       this.showSlice();
     });
 
+    let isMarchingSquare = gui.add(this.state.params, "marchingSquare");
+    isMarchingSquare.onChange(value => {
+      console.log("is enable marching square:", value);
+    });
+
     this.addToContainer(gui.domElement);
   };
 
   camera = () => {
+    /*
     this.camera = new THREE.OrthographicCamera(
       -this.props.width / 2,
       this.props.width / 2,
@@ -115,9 +122,19 @@ export default class Fifteenth extends React.Component {
       this.props.height / 2,
       -this.props.height / 2,
       -100,
-      1000
+      500
     );
-    this.camera.position.set(0, 0, 256);
+    */
+
+    this.camera = new THREE.OrthographicCamera(
+      -this.state.width / 2,
+      this.state.width / 2,
+      this.state.height / 2,
+      -this.state.height / 2,
+      -100,
+      500
+    );
+    this.camera.position.set(0, 0, 250);
     //   this.camera.lookAt(this.scene.position);
   };
 
@@ -128,42 +145,12 @@ export default class Fifteenth extends React.Component {
 
   objects = () => {
     this.addImage();
+    this.addMarchingSquares();
     //   this.addVertex();
   };
-  /*
-  addVertex = () => {
-    let points = new Float32Array([
-      0,
-      0,
-      0,
-      256,
-      256,
-      0,
-      -256,
-      -256,
-      0,
-      256,
-      -256,
-      0,
-      -256,
-      256,
-      0,
-      256,
-      0,
-      0,
-      -256,
-      0,
-      0,
-      0,
-      256,
-      0,
-      0,
-      -256,
-      0
-    ]);
-    this.addPoints(points);
-  };
-*/
+
+  addVertex = () => {};
+
   addPoints = points => {
     let geo = new THREE.BufferGeometry();
     let material = new THREE.PointsMaterial({
@@ -175,20 +162,91 @@ export default class Fifteenth extends React.Component {
     this.pointGroup.add(pointsObj);
   };
 
+  addMarchingSquares = () => {
+    if (this.state.data.length === 0) {
+      return;
+    }
+
+    let resolution = 8;
+    for (let j = 0; j < this.state.height / resolution; j++) {
+      for (let i = 0; i < this.state.width / resolution; i++) {
+        let pos = new Float32Array([
+          i * resolution - this.state.width / 2,
+          j * resolution - this.state.height / 2,
+          0
+        ]);
+
+        this.addPoints(pos);
+
+        let p = {
+          x: i * resolution - this.state.width / 2,
+          y: j * resolution - this.state.height / 2,
+          z: 0
+        };
+
+        let d = [
+          this.getPixelData(resolution * i, resolution * j),
+          this.getPixelData(resolution * i + resolution, resolution * j),
+          this.getPixelData(
+            resolution * i + resolution,
+            resolution * j + resolution
+          ),
+          this.getPixelData(resolution * i, resolution * j + resolution)
+        ];
+        //     console.log("i,", i, ",j:", j, ",pixel:", d);
+
+        let ms = new MarchingSquares(
+          this.marchingsquaresGroup,
+          p,
+          resolution,
+          this.state.params.iso,
+          d
+        );
+        ms.render();
+      }
+    }
+  };
+
+  getPixelData = (x, y) => {
+    let data = this.sliceData();
+    //    console.log("Data:", data);
+    return data[this.state.width * y + x];
+  };
+
   addMarks = () => {
     let data = this.sliceData();
     if (data.length === 0) {
       return;
     }
     let index = 0;
-    for (let j = 0; j < this.state.params.height; j++) {
-      for (let i = 0; i < this.state.params.width; i++) {
+    for (let j = 0; j < this.state.height; j++) {
+      for (let i = 0; i < this.state.width; i++) {
         let v = data[index];
         index++;
         if (v > this.state.params.iso) {
-          let p = new Float32Array([i - 100, j - 80, 0]);
-          //      console.log("x:", i, ",y:", j, ",v:,", v);
-
+          let p = new Float32Array([
+            i - this.state.width / 2,
+            j - this.state.height / 2,
+            0
+          ]);
+          /*
+          console.log(
+            "index:",
+            index,
+            "mark:",
+            p,
+            "x:",
+            i - this.state.width / 2,
+            "y:",
+            j - this.state.height / 2,
+            "v:",
+            v,
+            "i:",
+            i,
+            "j:",
+            j
+          );
+*/
           this.addPoints(p);
           return;
         }
@@ -213,12 +271,8 @@ export default class Fifteenth extends React.Component {
     if (obj.length === 0) {
       return [];
     }
-    let startPos =
-      (depth - 1) * this.state.params.width * this.state.params.height;
-    return obj.slice(
-      startPos,
-      startPos + this.state.params.width * this.state.params.height
-    );
+    let startPos = (depth - 1) * this.state.width * this.state.height;
+    return obj.slice(startPos, startPos + this.state.width * this.state.height);
   };
 
   sliceData = () => {
@@ -229,8 +283,8 @@ export default class Fifteenth extends React.Component {
       }
     }
     let index = 0;
-    for (let j = 0; j < this.state.params.height; j++) {
-      for (let i = 0; i < this.state.params.width; i++) {
+    for (let j = 0; j < this.state.height; j++) {
+      for (let i = 0; i < this.state.width; i++) {
         let value = data[index];
         index++;
         if (value > 0) {
@@ -270,6 +324,16 @@ export default class Fifteenth extends React.Component {
       }
     }
 
+    if (this.marchingsquaresGroup !== undefined) {
+      console.log(
+        "marching square group:",
+        this.marchingsquaresGroup.children.length
+      );
+      for (let i = 0; i < this.marchingsquaresGroup.children.length; i++) {
+        this.marchingsquaresGroup.remove(this.marchingsquaresGroup.children[i]);
+      }
+    }
+
     this.setState({
       left: { x: 1000, y: 0 },
       right: { x: -1000, y: 0 }
@@ -281,17 +345,14 @@ export default class Fifteenth extends React.Component {
 
     let textTure = new THREE.DataTexture(
       this.sliceData(),
-      this.state.params.width,
-      this.state.params.height
+      this.state.width,
+      this.state.height
     );
 
     textTure.format = THREE.LuminanceFormat;
     textTure.type = THREE.UnsignedByteType;
 
-    let geo = new THREE.PlaneGeometry(
-      this.state.params.width,
-      this.state.params.height
-    );
+    let geo = new THREE.PlaneGeometry(this.state.width, this.state.height);
 
     let spriteMaterial = new THREE.MeshBasicMaterial({
       map: textTure,
@@ -302,8 +363,10 @@ export default class Fifteenth extends React.Component {
     let sliceObj = new THREE.Mesh(geo, spriteMaterial);
     this.sliceGroup.add(sliceObj);
 
-    this.addMarks();
-    this.addLeftAndRight();
+    //    this.addMarks();
+    //    this.addLeftAndRight();
+
+    this.addMarchingSquares();
   };
 
   handleRawOnload = data => {
@@ -317,6 +380,9 @@ export default class Fifteenth extends React.Component {
 
     this.pointGroup = new THREE.Object3D();
     this.scene.add(this.pointGroup);
+
+    this.marchingsquaresGroup = new THREE.Object3D();
+    this.scene.add(this.marchingsquaresGroup);
 
     this.showSlice();
   };

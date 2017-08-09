@@ -1,10 +1,10 @@
 import * as THREE from "three";
 
 export default class MarchingSquares {
-  constructor(scene, position, resolution, iso, data) {
+  constructor(object, position, resolution, iso, data) {
     this.getVertex(position.x, position.y, position.z, resolution);
-    this.getMidPoint(position.x, position.y, position.z, resolution);
-    this.scene = scene;
+//    this.getMidPoint(position.x, position.y, position.z, resolution);
+    this.object = object;
     this.iso = iso;
     this.data = data;
     this.resolution = resolution;
@@ -17,6 +17,7 @@ export default class MarchingSquares {
       new THREE.Vector3(x, y + length, z)
     ];
   };
+  /*
   getMidPoint = (x, y, z, length) => {
     this.midPoint = [
       new THREE.Vector3(x + length / 2, y, z),
@@ -25,6 +26,7 @@ export default class MarchingSquares {
       new THREE.Vector3(x, y + length / 2, z)
     ];
   };
+  */
 
   // -------------------v1-----------v---------------v2-------------
   getIntero = (start, end) => {
@@ -80,11 +82,11 @@ export default class MarchingSquares {
   addIntersection = vertices => {
     let geo = new THREE.Geometry();
     geo.vertices = vertices;
-    let material = new THREE.LineDashedMaterial({
+    let material = new THREE.LineBasicMaterial({
       color: 0xffaa00
     });
-    let dashLine = new THREE.Line(geo, material);
-    this.scene.add(dashLine);
+    let line = new THREE.Line(geo, material);
+    this.object.add(line);
   };
 
   checkISO = data => {
