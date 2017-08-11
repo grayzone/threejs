@@ -10,7 +10,7 @@ export default class Fifteenth extends React.Component {
     aspect: this.props.width / this.props.height,
     params: {
       depth: 80,
-      iso: 1,
+      iso: 128,
       marchingSquare: false
     },
     data: [],
@@ -31,7 +31,7 @@ export default class Fifteenth extends React.Component {
     this.datGUI();
     this.stats();
 
-    // this.control();
+    this.control();
 
     this.animate();
   };
@@ -97,6 +97,7 @@ export default class Fifteenth extends React.Component {
       .step(1);
     depthControl.onChange(value => {
       //    console.log("depth change:", value);
+
       this.showSlice();
     });
     let isoControl = gui.add(this.state.params, "iso").min(1).max(256).step(1);
@@ -162,15 +163,27 @@ export default class Fifteenth extends React.Component {
     this.pointGroup.add(pointsObj);
   };
 
+  addContourLine = (start, end) => {
+    let geo = new THREE.Geometry();
+    geo.vertices.push(start, end);
+    let material = new THREE.LineBasicMaterial({
+      color: 0xffff00
+    });
+    let lineObj = new THREE.Line(geo, material);
+    this.scene.add(lineObj);
+  };
+
   addMarchingSquares = () => {
     if (this.state.data.length === 0) {
       return;
     }
 
-    let resolution = 8;
+    let resolution = 1;
+    let data = [];
     for (let j = 0; j < this.state.height / resolution; j++) {
+      data[j] = [];
       for (let i = 0; i < this.state.width / resolution; i++) {
-        let pos = new Float32Array([
+        /* let pos = new Float32Array([
           i * resolution - this.state.width / 2,
           j * resolution - this.state.height / 2,
           0
@@ -183,28 +196,31 @@ export default class Fifteenth extends React.Component {
           y: j * resolution - this.state.height / 2,
           z: 0
         };
+*/
+        data[j][i] = this.getPixelData(resolution * i, resolution * j);
 
-        let d = [
-          this.getPixelData(resolution * i, resolution * j),
-          this.getPixelData(resolution * i + resolution, resolution * j),
-          this.getPixelData(
-            resolution * i + resolution,
-            resolution * j + resolution
-          ),
-          this.getPixelData(resolution * i, resolution * j + resolution)
-        ];
         //     console.log("i,", i, ",j:", j, ",pixel:", d);
-
-        let ms = new MarchingSquares(
-          this.marchingsquaresGroup,
-          p,
-          resolution,
-          this.state.params.iso,
-          d
-        );
-        ms.render();
       }
     }
+    let ms = new MarchingSquares(data, this.state.params.iso);
+    let line = ms.getContourLine();
+    // for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < line.length; i++) {
+      let l = line[i];
+      //   console.log("line:", line[i]);
+      let start = new THREE.Vector3(
+        l[0].x - this.state.width / 2,
+        l[0].y - this.state.height / 2,
+        0
+      );
+      let end = new THREE.Vector3(
+        l[1].x - this.state.width / 2,
+        l[1].y - this.state.height / 2,
+        0
+      );
+      this.addContourLine(start, end);
+    }
+    //    console.log("line:", line);
   };
 
   getPixelData = (x, y) => {
