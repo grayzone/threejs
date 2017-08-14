@@ -3,7 +3,6 @@ import * as THREE from "three";
 import Stats from "stats.js";
 import OrbitControls from "orbit-controls-es6";
 import * as dat from "dat.gui/build/dat.gui.js";
-import MarchingSquares from "../libs/MarchingSquares";
 
 export default class Thirteenth extends React.Component {
   state = {
@@ -121,31 +120,13 @@ export default class Thirteenth extends React.Component {
   };
 
   addCases = () => {
-    let data = [
-      [0, 0, 0, 0],
-      [1.8, 0.6, 0.8, 0.4],
-      [0, 1.2, 0.4, 0.1],
-      [1.1, 1.8, 0.6, 0.8],
-      [0.3, 0.1, 1.7, 0.8],
-      [1.5, 0.6, 1.8, 0.1],
-      [0, 1.5, 1.8, 0],
-      [1.1, 1.4, 1.5, 0],
-      [0, 0, 0, 1.5],
-      [1.2, 0, 0, 1.9],
-      [0, 1.3, 0, 1.9],
-      [1.3, 1.1, 0, 1.8],
-      [0, 0, 1.2, 1.8],
-      [1.2, 0, 1.9, 1.6],
-      [0, 1.4, 1.1, 1.8],
-      [1, 1, 1, 1]
-    ];
     let index = 0;
     for (let j = 0; j < 4; j++) {
       for (let i = 0; i < 4; i++) {
         let x = -200 + 100 * i;
         let y = 150 - 100 * j;
         this.drawSquare(x, y, this.state.sideLength, index);
-
+        /*
         let m = new MarchingSquares(
           this.scene,
           { x: x, y: y, z: 0 },
@@ -154,6 +135,7 @@ export default class Thirteenth extends React.Component {
           data[index]
         );
         m.render();
+        */
         index++;
       }
     }
