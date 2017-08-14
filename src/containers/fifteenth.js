@@ -109,24 +109,25 @@ export default class Fifteenth extends React.Component {
     let isMarchingSquare = gui.add(this.state.params, "marchingSquare");
     isMarchingSquare.onChange(value => {
       console.log("is enable marching square:", value);
+      if (value) {
+        this.MarchingSquareObj = new THREE.Object3D();
+        this.showMarchingSquares(this.MarchingSquareObj);
+        this.scene.add(this.MarchingSquareObj);
+      } else {
+        console.log(
+          "Marching Squares:",
+          this.MarchingSquareObj.children.length
+        );
+        for (let i = 0; i < this.MarchingSquareObj.children.length; i++) {
+          this.MarchingSquareObj.remove(this.MarchingSquareObj.children[i]);
+        }
+      }
     });
 
     this.addToContainer(gui.domElement);
   };
 
   camera = () => {
-    /*
-    this.camera = new THREE.OrthographicCamera(
-      -this.props.width / 2,
-      this.props.width / 2,
-      //0,
-      this.props.height / 2,
-      -this.props.height / 2,
-      -100,
-      500
-    );
-    */
-
     this.camera = new THREE.OrthographicCamera(
       -this.state.width / 2,
       this.state.width / 2,
@@ -146,7 +147,7 @@ export default class Fifteenth extends React.Component {
 
   objects = () => {
     this.addImage();
-    this.addMarchingSquares();
+    //  this.addMarchingSquares();
     //   this.addVertex();
   };
 
@@ -163,51 +164,38 @@ export default class Fifteenth extends React.Component {
     this.pointGroup.add(pointsObj);
   };
 
-  addContourLine = (start, end) => {
+  addContourLine = (obj, start, end) => {
     let geo = new THREE.Geometry();
     geo.vertices.push(start, end);
     let material = new THREE.LineBasicMaterial({
       color: 0xffff00
     });
     let lineObj = new THREE.Line(geo, material);
-    this.scene.add(lineObj);
+    obj.add(lineObj);
   };
 
-  addMarchingSquares = () => {
+  showMarchingSquares = obj => {
     if (this.state.data.length === 0) {
       return;
     }
 
-    let resolution = 1;
+    let resolution = 16;
     let data = [];
-    for (let j = 0; j < this.state.height / resolution; j++) {
+    for (let j = 0; j < this.state.height; j++) {
       data[j] = [];
-      for (let i = 0; i < this.state.width / resolution; i++) {
-        /* let pos = new Float32Array([
-          i * resolution - this.state.width / 2,
-          j * resolution - this.state.height / 2,
-          0
-        ]);
-
-        this.addPoints(pos);
-
-        let p = {
-          x: i * resolution - this.state.width / 2,
-          y: j * resolution - this.state.height / 2,
-          z: 0
-        };
-*/
-        data[j][i] = this.getPixelData(resolution * i, resolution * j);
+      for (let i = 0; i < this.state.width; i++) {
+        data[j][i] = this.getPixelData(i, j);
 
         //     console.log("i,", i, ",j:", j, ",pixel:", d);
       }
     }
-    let ms = new MarchingSquares(data, this.state.params.iso);
+    let ms = new MarchingSquares(data, this.state.params.iso, resolution);
     let line = ms.getContourLine();
-    // for (let i = 0; i < 100; i++) {
-    for (let i = 0; i < line.length; i++) {
+    console.log("line number:", line.length);
+    for (let i = 0; i < 30; i++) {
+      //for (let i = 0; i < line.length; i++) {
       let l = line[i];
-      //   console.log("line:", line[i]);
+      console.log("line:", line[i]);
       let start = new THREE.Vector3(
         l[0].x - this.state.width / 2,
         l[0].y - this.state.height / 2,
@@ -218,9 +206,9 @@ export default class Fifteenth extends React.Component {
         l[1].y - this.state.height / 2,
         0
       );
-      this.addContourLine(start, end);
+      this.addContourLine(obj, start, end);
     }
-    //    console.log("line:", line);
+    console.log("line:", line);
   };
 
   getPixelData = (x, y) => {
@@ -382,7 +370,7 @@ export default class Fifteenth extends React.Component {
     //    this.addMarks();
     //    this.addLeftAndRight();
 
-    this.addMarchingSquares();
+    //   this.addMarchingSquares();
   };
 
   handleRawOnload = data => {

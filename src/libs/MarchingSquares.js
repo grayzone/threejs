@@ -5,6 +5,15 @@ https://en.wikipedia.org/wiki/Marching_squares
 class Node {
   x;
   y;
+  equal = v => {
+    if (v.x !== this.x) {
+      return false;
+    }
+    if (v.y !== this.y) {
+      return false;
+    }
+    return true;
+  };
 }
 
 class ControlNode extends Node {
@@ -299,31 +308,53 @@ class Square {
 }
 
 export default class MarchingSquares {
-  constructor(data, threshold) {
+  constructor(data, threshold, resolution) {
     this.data = data;
     this.threshold = threshold;
+    this.resolution = resolution;
   }
 
   getContourLine = () => {
-    let rows = this.data.length - 1;
-    let cols = this.data[0].length - 1;
+    let r = this.resolution;
+    let rows = this.data.length / r - 1;
+    let cols = this.data[0].length / r - 1;
 
     let result = [];
 
     for (let j = 0; j < rows; j++) {
       for (let i = 0; i < cols; i++) {
-        let bl = this.data[j][i];
-        let br = this.data[j][i + 1];
-        let tr = this.data[j + 1][i + 1];
-        let tl = this.data[j + 1][i];
+        let bl = this.data[r * j][r * i];
+        let br = this.data[r * j][r * i + r];
+        let tr = this.data[r * j + r][r * i + r];
+        let tl = this.data[r * j + r][r * i];
 
         if (isNaN(tl) || isNaN(tr) || isNaN(bl) || isNaN(br)) {
           continue;
         }
-        let bottomLeft = new ControlNode(i, j, bl, bl >= this.threshold);
-        let bottomRight = new ControlNode(i + 1, j, br, br >= this.threshold);
-        let topRight = new ControlNode(i + 1, j + 1, tr, tr >= this.threshold);
-        let topLeft = new ControlNode(i, j + 1, tl, tl >= this.threshold);
+        let bottomLeft = new ControlNode(
+          r * i,
+          r * j,
+          bl,
+          bl >= this.threshold
+        );
+        let bottomRight = new ControlNode(
+          r * i + r,
+          r * j,
+          br,
+          br >= this.threshold
+        );
+        let topRight = new ControlNode(
+          r * i + r,
+          r * j + r,
+          tr,
+          tr >= this.threshold
+        );
+        let topLeft = new ControlNode(
+          r * i,
+          r * j + r,
+          tl,
+          tl >= this.threshold
+        );
         let square = new Square(
           topLeft,
           topRight,
@@ -343,328 +374,3 @@ export default class MarchingSquares {
     return result;
   };
 }
-
-/*
-// 2D ISO lines
-export default class MarchingSquares {
-  constructor(object, data, resolution, threshold) {
-    //     this.getVertex(position.x, position.y, position.z, resolution);
-    //    this.getMidPoint(position.x, position.y, position.z, resolution);
-    this.object = object;
-    this.threshold = threshold;
-    this.data = data;
-    this.resolution = resolution;
-  }
-
-  computeContourGrid = (data, threshold) => {
-    let rows = data.length - 1;
-    let cols = data[0].length - 1;
-    let contourGrid = {
-      rows: rows,
-      cols: cols,
-      cells: []
-    };
-    for (let j = 0; j < rows; j++) {
-      contourGrid.cells[j] = [];
-      for (let i = 0; i < cols; i++) {
-        let bl = data[j][i];
-        let br = data[j][i + 1];
-        let tr = data[j + 1][i + 1];
-        let tl = data[j + 1][i];
-
-        if (isNaN(tl) || isNaN(tr) || isNaN(bl) || isNaN(br)) {
-          continue;
-        }
-        let cval = 0;
-        cval |= bl >= threshold ? 1 : 0;
-        cval |= br >= threshold ? 2 : 0;
-        cval |= tr >= threshold ? 4 : 0;
-        cval |= tl >= threshold ? 8 : 0;
-
-        var flipped = false;
-        if (cval === 5 || cval === 10) {
-          var average = (bl + br + tr + tl) / 4;
-          if (cval === 5 && average < threshold) {
-            cval = 10;
-            flipped = true;
-          } else if (cval === 5 && average < threshold) {
-            cval = 5;
-            flipped = true;
-          }
-        }
-
-        if (cval === 0 || cval === 15) {
-          continue;
-        }
-
-        let top = 0.5;
-        let bottom = 0.5;
-        let left = 0.5;
-        let right = 0.5;
-        switch (cval) {
-          case 1:
-            break;
-          case 2:
-            break;
-          case 3:
-            break;
-          case 4:
-            break;
-          case 5:
-            break;
-          case 6:
-            break;
-          case 7:
-            break;
-          case 8:
-            break;
-          case 9:
-            break;
-          case 10:
-            break;
-          case 11:
-            break;
-          case 12:
-            break;
-          case 13:
-            break;
-          case 14:
-            break;
-          default:
-            break;
-        }
-      }
-    }
-  };
-
-  
-  getVertex = (x, y, z, length) => {
-    this.vertex = [
-      new THREE.Vector3(x, y, z),
-      new THREE.Vector3(x + length, y, z),
-      new THREE.Vector3(x + length, y + length, z),
-      new THREE.Vector3(x, y + length, z)
-    ];
-  };
-
-  getMidPoint = (x, y, z, length) => {
-    this.midPoint = [
-      new THREE.Vector3(x + length / 2, y, z),
-      new THREE.Vector3(x + length, y + length / 2, z),
-      new THREE.Vector3(x + length / 2, y + length, z),
-      new THREE.Vector3(x, y + length / 2, z)
-    ];
-  };
-  
-
-  interpolate = (x, start, end) => {
-    return (x - start) / (start - end);
-  };
-
-  // -------------------v1-----------v---------------v2-------------
-  getIntero = (start, end) => {
-    return this.resolution * (start - this.iso) / (start - end);
-  };
-
-  getMiddlePoint = (v, e) => {
-    let p = this.vertex[v];
-    let result = { x: 0, y: 0, z: p.z };
-    if (v === 0 && e === 0) {
-      result.y = p.y;
-      result.x = p.x + this.getIntero(this.data[0], this.data[1]);
-      return result;
-    }
-    if (v === 0 && e === 3) {
-      result.x = p.x;
-      result.y = p.y + this.getIntero(this.data[0], this.data[3]);
-      return result;
-    }
-    if (v === 1 && e === 0) {
-      result.y = p.y;
-      result.x = p.x - this.getIntero(this.data[1], this.data[0]);
-      return result;
-    }
-    if (v === 1 && e === 1) {
-      result.x = p.x;
-      result.y = p.y + this.getIntero(this.data[1], this.data[2]);
-      return result;
-    }
-    if (v === 2 && e === 1) {
-      result.x = p.x;
-      result.y = p.y - this.getIntero(this.data[2], this.data[1]);
-      return result;
-    }
-    if (v === 2 && e === 2) {
-      result.y = p.y;
-      result.x = p.x - this.getIntero(this.data[2], this.data[3]);
-      return result;
-    }
-    if (v === 3 && e === 2) {
-      result.y = p.y;
-      result.x = p.x + this.getIntero(this.data[3], this.data[2]);
-      return result;
-    }
-    if (v === 3 && e === 3) {
-      result.x = p.x;
-      result.y = p.y - this.getIntero(this.data[3], this.data[0], this.iso);
-      return result;
-    }
-    return result;
-  };
-
-  addIntersection = vertices => {
-    let geo = new THREE.Geometry();
-    geo.vertices = vertices;
-    let material = new THREE.LineBasicMaterial({
-      color: 0xffaa00
-    });
-    let line = new THREE.Line(geo, material);
-    this.object.add(line);
-  };
-
-  checkISO = data => {
-    this.result = 0;
-    if (data[0] > this.iso) {
-      this.result |= 1;
-    }
-    if (data[1] > this.iso) {
-      this.result |= 2;
-    }
-    if (data[2] > this.iso) {
-      this.result |= 4;
-    }
-    if (data[3] > this.iso) {
-      this.result |= 8;
-    }
-  };
-
-  render() {
-    this.checkISO(this.data);
-    this.cases(this.result);
-  }
-
-  cases = index => {
-    let intersects = [];
-    let start = null;
-    let end = null;
-    switch (index) {
-      case 0:
-        // 0000
-        break;
-      case 1:
-        // 0001
-        start = this.getMiddlePoint(0, 0);
-        end = this.getMiddlePoint(0, 3);
-        intersects = [start, end];
-        this.addIntersection(intersects);
-        break;
-      case 2:
-        // 0010
-        start = this.getMiddlePoint(1, 0);
-        end = this.getMiddlePoint(1, 1);
-        intersects = [start, end];
-        this.addIntersection(intersects);
-        break;
-      case 3:
-        // 0011
-        start = this.getMiddlePoint(0, 3);
-        end = this.getMiddlePoint(1, 1);
-        intersects = [start, end];
-        this.addIntersection(intersects);
-        break;
-      case 4:
-        // 0100
-        start = this.getMiddlePoint(2, 1);
-        end = this.getMiddlePoint(2, 2);
-        intersects = [start, end];
-        this.addIntersection(intersects);
-        break;
-      case 5:
-        // 0101
-        start = this.getMiddlePoint(0, 0);
-        end = this.getMiddlePoint(0, 3);
-        intersects = [start, end];
-        this.addIntersection(intersects);
-
-        start = this.getMiddlePoint(2, 1);
-        end = this.getMiddlePoint(2, 2);
-        intersects = [start, end];
-        this.addIntersection(intersects);
-        break;
-      case 6:
-        // 0110
-        start = this.getMiddlePoint(1, 0);
-        end = this.getMiddlePoint(2, 2);
-        intersects = [start, end];
-        this.addIntersection(intersects);
-        break;
-      case 7:
-        // 0111
-        start = this.getMiddlePoint(3, 2);
-        end = this.getMiddlePoint(3, 3);
-        intersects = [start, end];
-        this.addIntersection(intersects);
-        break;
-      case 8:
-        // 1000
-        start = this.getMiddlePoint(3, 3);
-        end = this.getMiddlePoint(3, 2);
-        intersects = [start, end];
-        this.addIntersection(intersects);
-        break;
-      case 9:
-        // 1001
-        start = this.getMiddlePoint(0, 0);
-        end = this.getMiddlePoint(3, 2);
-        intersects = [start, end];
-        this.addIntersection(intersects);
-        break;
-      case 10:
-        // 1010
-        start = this.getMiddlePoint(1, 0);
-        end = this.getMiddlePoint(3, 3);
-        intersects = [start, end];
-        this.addIntersection(intersects);
-
-        start = this.getMiddlePoint(1, 1);
-        end = this.getMiddlePoint(3, 2);
-        intersects = [start, end];
-        this.addIntersection(intersects);
-        break;
-      case 11:
-        // 1011
-        start = this.getMiddlePoint(1, 1);
-        end = this.getMiddlePoint(3, 2);
-        intersects = [start, end];
-        this.addIntersection(intersects);
-        break;
-      case 12:
-        // 1100
-        start = this.getMiddlePoint(2, 1);
-        end = this.getMiddlePoint(3, 3);
-        intersects = [start, end];
-        this.addIntersection(intersects);
-        break;
-      case 13:
-        // 1101
-        start = this.getMiddlePoint(0, 0);
-        end = this.getMiddlePoint(2, 1);
-        intersects = [start, end];
-        this.addIntersection(intersects);
-        break;
-      case 14:
-        // 1110
-        start = this.getMiddlePoint(1, 0);
-        end = this.getMiddlePoint(3, 3);
-        intersects = [start, end];
-        this.addIntersection(intersects);
-        break;
-      case 15:
-        // 1111
-        break;
-      default:
-        break;
-    }
-  };
-}
-*/
