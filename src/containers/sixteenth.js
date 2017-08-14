@@ -6,8 +6,9 @@ import * as dat from "dat.gui/build/dat.gui.js";
 
 class Cube {
   constructor(obj, position, size, resolution) {
-    this.position = position;
-    this.getVectics(obj, position, size);
+    this.getVertex(obj, position, size);
+    this.getEdges(obj);
+    //   this.getSubVertex(obj, size, resolution);
   }
 
   vertexOffset = [
@@ -21,29 +22,112 @@ class Cube {
     [0, 1, 1]
   ];
 
-  getVectics = (obj, position, size) => {
+  edgeConnection = [
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [3, 0],
+    [4, 5],
+    [5, 6],
+    [6, 7],
+    [7, 4],
+    [0, 4],
+    [1, 5],
+    [2, 6],
+    [3, 7]
+  ];
+
+  getVertex = (obj, position, size) => {
     console.log("vertex offset:", this.vertexOffset);
-    this.vectics = [];
+    this.vertex = [];
     for (let i = 0; i < 8; i++) {
       let p = new THREE.Vector3(
-        size * this.vertexOffset[i][0],
-        size * this.vertexOffset[i][1],
-        size * this.vertexOffset[i][2]
+        position[0] + size * this.vertexOffset[i][0],
+        position[1] + size * this.vertexOffset[i][1],
+        position[2] + size * this.vertexOffset[i][2]
       );
-      this.vectics.push(p);
+      this.vertex.push(p);
     }
 
     let geo = new THREE.Geometry();
     let material = new THREE.PointsMaterial({
-      color: 0x422921,
-      size: 10
+      color: 0x000000,
+      size: 30
     });
 
-    geo.vertices = this.vectics;
+    geo.vertices = this.vertex;
 
     let points = new THREE.Points(geo, material);
+    let vertexObj = new THREE.Object3D();
+    vertexObj.name = "vertex";
+    vertexObj.add(points);
     //   points.position.y = 150;
+    obj.add(vertexObj);
+  };
+
+  getSubVertex = (obj, size, resolution) => {
+    if (resolution >= this.size) {
+      console.error(
+        "resolution is too large, size:",
+        size,
+        ", resolution:",
+        resolution
+      );
+      return;
+    }
+    if (size % resolution !== 0) {
+      console.error(
+        "invalid resolution, size:",
+        size,
+        ",resolution:",
+        resolution
+      );
+      return;
+    }
+    let plist = [];
+    let times = size / resolution;
+    for (let i = 1; i < times; i++) {
+      let p = null;
+      p = new THREE.Vector3(i * resolution, 0, 0);
+      plist.push(p);
+      /*
+      p = new THREE.Vector3(i * resolution , 0, 0);
+      plist.push(p);
+      */
+    }
+
+    let geo = new THREE.Geometry();
+    geo.vertices = plist;
+    let material = new THREE.PointsMaterial({
+      color: 0xe52222,
+      size: 20
+    });
+    let points = new THREE.Points(geo, material);
+    points.name = "subVertex";
     obj.add(points);
+  };
+
+  getEdges = obj => {
+    console.log("edge connection:", this.edgeConnection);
+    let edgeObj = new THREE.Object3D();
+    edgeObj.name = "edges";
+    for (let i = 0; i < this.edgeConnection.length; i++) {
+      let e = this.edgeConnection[i];
+      //   console.log("edge:", e);
+      let geo = new THREE.Geometry();
+      let material = new THREE.LineBasicMaterial({
+        color: 0xff00ff
+      });
+
+      for (let j = 0; j < e.length; j++) {
+        geo.vertices.push(this.vertex[e[j]]);
+      }
+
+      let edge = new THREE.Line(geo, material);
+      edgeObj.add(edge);
+    }
+
+    obj.add(edgeObj);
   };
 }
 
@@ -72,7 +156,7 @@ export default class Sixteenth extends React.Component {
     this.datGUI();
     this.stats();
 
-    //    this.control();
+    this.control();
 
     this.animate();
   };
@@ -109,7 +193,9 @@ export default class Sixteenth extends React.Component {
   control = () => {
     let controls = new OrbitControls(this.camera, this.renderer.domElement);
     controls.enabled = true;
-    controls.target.set(0, 1, 0);
+
+    controls.target.set(256, 256, 256);
+
     controls.update();
   };
 
@@ -251,10 +337,14 @@ export default class Sixteenth extends React.Component {
   update = () => {};
 
   addCubes = () => {
-    let cubesObj = new THREE.Object3D();
-    this.scene.add(cubesObj);
+    let cubeObj = new THREE.Object3D();
+    cubeObj.name = "cube";
+
+    this.scene.add(cubeObj);
     let pos = [0, 0, 0];
-    let c = new Cube(this.scene, pos, 512, 1);
+    //  console.log("cube obj:", cubeObj);
+    let c = new Cube(cubeObj, pos, 512, 64);
+    let c1 = new Cube(cubeObj, [128, 128, 128], 64, 1);
   };
 
   addPlane = () => {
