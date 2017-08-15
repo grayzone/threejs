@@ -6,10 +6,65 @@ import * as dat from "dat.gui/build/dat.gui.js";
 
 class Cube {
   constructor(obj, position, size, resolution) {
-    this.getVertex(obj, position, size);
-    this.getEdges(obj);
-    //   this.getSubVertex(obj, size, resolution);
+    if (resolution > size) {
+      console.error(
+        "resolution is too large, size:",
+        size,
+        ", resolution:",
+        resolution
+      );
+      return;
+    }
+    if (size % resolution !== 0) {
+      console.error(
+        "invalid resolution, size:",
+        size,
+        ",resolution:",
+        resolution
+      );
+      return;
+    }
+    this.obj = obj;
+    this.position = position;
+    this.size = size;
+    this.resolution = resolution;
   }
+
+  render = () => {
+    let blockObj = new THREE.Object3D();
+    blockObj.name = "block";
+    this.obj.add(blockObj);
+    let times = this.size / this.resolution;
+    for (let k = 0; k < times; k++) {
+      for (let j = 0; j < times; j++) {
+        for (let i = 0; i < times; i++) {
+          let p = [
+            i * this.resolution,
+            j * this.resolution,
+            k * this.resolution
+          ];
+          let b = new Block(blockObj, p, this.resolution);
+          b.render();
+        }
+      }
+    }
+  };
+}
+
+class Block {
+  constructor(obj, position, size) {
+    this.obj = obj;
+    this.position = position;
+    this.size = size;
+  }
+
+  render = () => {
+    this.getVertex(this.position, this.size);
+    //   this.showVertex(obj);
+
+    this.showEdges(this.obj);
+    //   this.getSubVertex(obj, size, resolution);
+  };
 
   vertexOffset = [
     [0, 0, 0],
@@ -37,8 +92,8 @@ class Cube {
     [3, 7]
   ];
 
-  getVertex = (obj, position, size) => {
-    console.log("vertex offset:", this.vertexOffset);
+  getVertex = (position, size) => {
+    //    console.log("vertex offset:", this.vertexOffset);
     this.vertex = [];
     for (let i = 0; i < 8; i++) {
       let p = new THREE.Vector3(
@@ -48,7 +103,9 @@ class Cube {
       );
       this.vertex.push(p);
     }
+  };
 
+  showVertex = obj => {
     let geo = new THREE.Geometry();
     let material = new THREE.PointsMaterial({
       color: 0x000000,
@@ -65,50 +122,8 @@ class Cube {
     obj.add(vertexObj);
   };
 
-  getSubVertex = (obj, size, resolution) => {
-    if (resolution >= this.size) {
-      console.error(
-        "resolution is too large, size:",
-        size,
-        ", resolution:",
-        resolution
-      );
-      return;
-    }
-    if (size % resolution !== 0) {
-      console.error(
-        "invalid resolution, size:",
-        size,
-        ",resolution:",
-        resolution
-      );
-      return;
-    }
-    let plist = [];
-    let times = size / resolution;
-    for (let i = 1; i < times; i++) {
-      let p = null;
-      p = new THREE.Vector3(i * resolution, 0, 0);
-      plist.push(p);
-      /*
-      p = new THREE.Vector3(i * resolution , 0, 0);
-      plist.push(p);
-      */
-    }
-
-    let geo = new THREE.Geometry();
-    geo.vertices = plist;
-    let material = new THREE.PointsMaterial({
-      color: 0xe52222,
-      size: 20
-    });
-    let points = new THREE.Points(geo, material);
-    points.name = "subVertex";
-    obj.add(points);
-  };
-
-  getEdges = obj => {
-    console.log("edge connection:", this.edgeConnection);
+  showEdges = obj => {
+    //    console.log("edge connection:", this.edgeConnection);
     let edgeObj = new THREE.Object3D();
     edgeObj.name = "edges";
     for (let i = 0; i < this.edgeConnection.length; i++) {
@@ -124,9 +139,9 @@ class Cube {
       }
 
       let edge = new THREE.Line(geo, material);
+      edge.name = "edge";
       edgeObj.add(edge);
     }
-
     obj.add(edgeObj);
   };
 }
@@ -194,7 +209,11 @@ export default class Sixteenth extends React.Component {
     let controls = new OrbitControls(this.camera, this.renderer.domElement);
     controls.enabled = true;
 
-    controls.target.set(256, 256, 256);
+    controls.target.set(
+      this.props.width / 2,
+      this.props.height / 2,
+      this.props.width / 2
+    );
 
     controls.update();
   };
@@ -325,13 +344,13 @@ export default class Sixteenth extends React.Component {
   };
 
   objects = () => {
-    this.addPlane();
+    //  this.addPlane();
     this.addHelper();
-    this.addAxis();
+    //  this.addAxis();
 
     this.addCubes();
 
-    console.log("scene:", this.scene);
+    console.log("scene:", this.scene.children);
   };
 
   update = () => {};
@@ -339,12 +358,11 @@ export default class Sixteenth extends React.Component {
   addCubes = () => {
     let cubeObj = new THREE.Object3D();
     cubeObj.name = "cube";
-
     this.scene.add(cubeObj);
     let pos = [0, 0, 0];
     //  console.log("cube obj:", cubeObj);
-    let c = new Cube(cubeObj, pos, 512, 64);
-    let c1 = new Cube(cubeObj, [128, 128, 128], 64, 1);
+    let c = new Cube(cubeObj, pos, 512, 256);
+    c.render();
   };
 
   addPlane = () => {
