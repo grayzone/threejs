@@ -4,6 +4,7 @@ import Stats from "stats.js";
 import OrbitControls from "orbit-controls-es6";
 import * as dat from "dat.gui/build/dat.gui.js";
 
+
 class Cube {
   constructor(obj, position, size, resolution) {
     if (resolution > size) {
@@ -43,7 +44,7 @@ class Cube {
             j * this.resolution,
             k * this.resolution
           ];
-          let b = new Block(blockObj, p, this.resolution);
+          let b = new Grid(blockObj, p, this.resolution);
           b.render();
         }
       }
@@ -51,11 +52,15 @@ class Cube {
   };
 }
 
-class Block {
-  constructor(obj, position, size) {
+class Grid {
+  constructor(obj, position, size, data, threshold) {
     this.obj = obj;
     this.position = position;
     this.size = size;
+    this.data = data;
+    this.threshold = threshold;
+
+    this.gridIndex(data, threshold);
   }
 
   render = () => {
@@ -91,6 +96,34 @@ class Block {
     [2, 6],
     [3, 7]
   ];
+
+  gridIndex = (data, threshold) => {
+    this.gridIndex = 0;
+    if (data[0] < threshold) {
+      this.gridIndex |= 1;
+    }
+    if (data[1] < threshold) {
+      this.gridIndex |= 2;
+    }
+    if (data[2] < threshold) {
+      this.gridIndex |= 4;
+    }
+    if (data[3] < threshold) {
+      this.gridIndex |= 8;
+    }
+    if (data[4] < threshold) {
+      this.gridIndex |= 16;
+    }
+    if (data[5] < threshold) {
+      this.gridIndex |= 32;
+    }
+    if (data[6] < threshold) {
+      this.gridIndex |= 64;
+    }
+    if (data[7] < threshold) {
+      this.gridIndex |= 128;
+    }
+  };
 
   getVertex = (position, size) => {
     //    console.log("vertex offset:", this.vertexOffset);
