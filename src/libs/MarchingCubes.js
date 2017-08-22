@@ -1,7 +1,307 @@
+import * as THREE from "three";
+
 export default class MarchingCubes {
-  constructor(data, threshold, resolution) {
-    //    this.createCubes();
+  constructor(obj, data, threshold, resolution) {
+    let size = data.length - 1;
+    //let size = 512;
+    if (resolution > size) {
+      console.error(
+        "resolution is too large, size:",
+        size,
+        ", resolution:",
+        resolution
+      );
+      return;
+    }
+    if (size % resolution !== 0) {
+      console.error(
+        "invalid resolution, size:",
+        size,
+        ",resolution:",
+        resolution
+      );
+      return;
+    }
+    this.obj = obj;
+    this.size = size;
+    this.resolution = resolution;
+    this.data = data;
+    this.threshold = threshold;
   }
+
+  render() {
+    let blockObj = new THREE.Object3D();
+    blockObj.name = "block";
+    this.obj.add(blockObj);
+    let times = this.size / this.resolution;
+    for (let k = 0; k < times; k++) {
+      for (let j = 0; j < times; j++) {
+        for (let i = 0; i < times; i++) {
+          let p = [
+            i * this.resolution,
+            j * this.resolution,
+            k * this.resolution
+          ];
+          let b = new Grid(
+            blockObj,
+            p,
+            this.resolution,
+            this.data,
+            this.threshold
+          );
+          b.render();
+        }
+      }
+    }
+  }
+}
+
+class Grid {
+  constructor(obj, position, size, data, threshold) {
+    this.obj = obj;
+    this.position = position;
+    this.size = size;
+    this.data = data;
+    this.threshold = threshold;
+    this.getVertex();
+    this.gridIndex();
+    this.getCentres();
+    this.getFaces();
+  }
+
+  render = () => {
+ //   this.showVertex(this.obj);
+    this.showEdges(this.obj);
+    this.showCentres(this.obj);
+    this.showFaces(this.obj);
+  };
+
+  gridIndex = () => {
+    //    console.log("data:", data);
+    this.gridIndex = 0;
+    this.nodeIndex = [1, 1, 1, 1, 1, 1, 1, 1];
+    for (let i = 0; i < 8; i++) {
+      //      this.nodeIndex[i] = 1;
+      if (this.nodeValue[i] < this.threshold) {
+        this.gridIndex |= 1 << i;
+        this.nodeIndex[i] = 0;
+      }
+    }
+    console.log("node index:",this.nodeIndex);
+  };
+
+  getVertex = () => {
+    //    console.log("vertex offset:", this.vertexOffset);
+    this.vertex = [];
+    this.nodeValue = [];
+    for (let i = 0; i < 8; i++) {
+      let p = new THREE.Vector3(
+        this.position[0] + this.size * this.vertexOffset[i][0],
+        this.position[1] + this.size * this.vertexOffset[i][1],
+        this.position[2] + this.size * this.vertexOffset[i][2]
+      );
+      //     p.value = this.data[p.z][p.y][p.x];
+      console.log("p :", i, ",position:", p);
+      this.vertex.push(p);
+      this.nodeValue.push(this.data[p.z][p.y][p.x]);
+    }
+    console.log("data:", this.nodeValue);
+  };
+
+  getCentres = () => {
+    let edgeFlag = this.edgeTable[this.gridIndex];
+    console.log(
+      "grid index:",
+      this.gridIndex,
+      ", edge flag:",
+      edgeFlag,
+      "this vertex:",
+      this.vertex
+    );
+
+    this.edgeIndex = new Array(12);
+/*
+    if (edgeFlag === 0) {
+      return;
+    }
+*/
+    this.vertexList = new Array(12);
+    for (let i = 0; i < 12; i++) {
+      if (edgeFlag & (1 << i)) {
+        this.edgeIndex[i] = 1;
+        let p1 = this.vertex[this.edgeConnection[i][0]];
+        p1.value = this.nodeValue[this.edgeConnection[i][0]];
+        //       p1.value = this.data[this.edgeConnection[i][0]];
+        let p2 = this.vertex[this.edgeConnection[i][1]];
+        p2.value = this.nodeValue[this.edgeConnection[i][1]];
+        //       p2.value = this.data[this.edgeConnection[i][1]];
+        this.vertexList[i] = this.vertexInterp(p1, p2);
+      }
+
+      console.log(
+        "index:",
+        i,
+        "intersection:",
+        edgeFlag & (1 << i),
+        ", ",
+        1 << i,
+        ",",
+        this.edgeIndex[i],
+        ",",
+        this.vertexList[i]
+      );
+    }
+  };
+
+  getFaces = () => {};
+
+  showVertex = obj => {
+    let geo = new THREE.Geometry();
+    let material = new THREE.PointsMaterial({
+      color: "#0040FF",
+      size: 20
+    });
+
+    let ps = [];
+    for (let i = 0; i < 8; i++) {
+      if (this.nodeIndex[i] === 0) {
+        ps.push(this.vertex[i]);
+      }
+    }
+
+    geo.vertices = ps;
+
+    let points = new THREE.Points(geo, material);
+    let vertexObj = new THREE.Object3D();
+    vertexObj.name = "vertex";
+    vertexObj.add(points);
+    //   points.position.y = 150;
+    obj.add(vertexObj);
+  };
+
+  showCentres = obj => {
+    let geo = new THREE.Geometry();
+    let material = new THREE.PointsMaterial({
+      color: "green",
+      size: 10
+    });
+
+    let centrePoints = [];
+    this.centres = [];
+    for (let i = 0; i < 12; i++) {
+      let p = new THREE.Vector3();
+      if (this.vertexList[i] === undefined) {
+        this.centres.push(p);
+        continue;
+      }
+      p.x = this.vertexList[i][0];
+      p.y = this.vertexList[i][1];
+      p.z = this.vertexList[i][2];
+      centrePoints.push(p);
+      this.centres.push(p);
+    }
+
+    geo.vertices = centrePoints;
+
+    let points = new THREE.Points(geo, material);
+    let centreObj = new THREE.Object3D();
+    centreObj.name = "centre";
+    centreObj.add(points);
+    obj.add(centreObj);
+  };
+
+  showEdges = obj => {
+    //    console.log("edge connection:", this.edgeConnection);
+    let edgeObj = new THREE.Object3D();
+    edgeObj.name = "edges";
+    for (let i = 0; i < this.edgeConnection.length; i++) {
+      let e = this.edgeConnection[i];
+      //   console.log("edge:", e);
+      let geo = new THREE.Geometry();
+      let material = null;
+      if (this.edgeIndex[i] === 1) {
+        material = new THREE.LineBasicMaterial({
+          color: 0xff00ff
+        });
+      } else {
+        material = new THREE.LineBasicMaterial({
+          color: 0x562727
+        });
+      }
+
+      for (let j = 0; j < e.length; j++) {
+        geo.vertices.push(this.vertex[e[j]]);
+      }
+
+      let edge = new THREE.Line(geo, material);
+      edge.name = "edge";
+      edgeObj.add(edge);
+    }
+    obj.add(edgeObj);
+  };
+
+  showFaces = obj => {
+    let material = new THREE.MeshStandardMaterial({
+      color: 0x00cc00,
+      side: THREE.DoubleSide
+    });
+
+    let geo = new THREE.Geometry();
+    geo.vertices = this.centres;
+    console.log("tritable:", this.triTable[this.gridIndex]);
+    for (let i = 0; this.triTable[this.gridIndex][i] !== -1; i += 3) {
+      let f = this.triTable[this.gridIndex];
+      let face = new THREE.Face3(f[i], f[i + 1], f[i + 2]);
+      geo.faces.push(face);
+
+      geo.computeFaceNormals();
+      geo.computeVertexNormals();
+    }
+    let faceObj = new THREE.Mesh(geo, material);
+    faceObj.name = "faces";
+
+    obj.add(faceObj);
+  };
+
+  //P = P1 + (isovalue - V1)(P2-P1)/(V2-V1)
+  // p1 is the node below the threshold
+  interpolate = (p1, p2, v1, v2, threshold) => {
+    return p1 + (threshold - v1) * (p2 - p1) / (v2 - v1);
+  };
+
+  vertexInterp = (p1, p2) => {
+    return [
+      this.interpolate(p1.x, p2.x, p1.value, p2.value, this.threshold),
+      this.interpolate(p1.y, p2.y, p1.value, p2.value, this.threshold),
+      this.interpolate(p1.z, p2.z, p1.value, p2.value, this.threshold)
+    ];
+  };
+
+  vertexOffset = [
+    [0, 0, 0],
+    [1, 0, 0],
+    [1, 1, 0],
+    [0, 1, 0],
+    [0, 0, 1],
+    [1, 0, 1],
+    [1, 1, 1],
+    [0, 1, 1]
+  ];
+
+  edgeConnection = [
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [3, 0],
+    [4, 5],
+    [5, 6],
+    [6, 7],
+    [7, 4],
+    [0, 4],
+    [1, 5],
+    [2, 6],
+    [3, 7]
+  ];
 
   // 256
   edgeTable = [

@@ -3,181 +3,7 @@ import * as THREE from "three";
 import Stats from "stats.js";
 import OrbitControls from "orbit-controls-es6";
 import * as dat from "dat.gui/build/dat.gui.js";
-
-
-class Cube {
-  constructor(obj, position, size, resolution) {
-    if (resolution > size) {
-      console.error(
-        "resolution is too large, size:",
-        size,
-        ", resolution:",
-        resolution
-      );
-      return;
-    }
-    if (size % resolution !== 0) {
-      console.error(
-        "invalid resolution, size:",
-        size,
-        ",resolution:",
-        resolution
-      );
-      return;
-    }
-    this.obj = obj;
-    this.position = position;
-    this.size = size;
-    this.resolution = resolution;
-  }
-
-  render = () => {
-    let blockObj = new THREE.Object3D();
-    blockObj.name = "block";
-    this.obj.add(blockObj);
-    let times = this.size / this.resolution;
-    for (let k = 0; k < times; k++) {
-      for (let j = 0; j < times; j++) {
-        for (let i = 0; i < times; i++) {
-          let p = [
-            i * this.resolution,
-            j * this.resolution,
-            k * this.resolution
-          ];
-          let b = new Grid(blockObj, p, this.resolution);
-          b.render();
-        }
-      }
-    }
-  };
-}
-
-class Grid {
-  constructor(obj, position, size, data, threshold) {
-    this.obj = obj;
-    this.position = position;
-    this.size = size;
-    this.data = data;
-    this.threshold = threshold;
-
-    this.gridIndex(data, threshold);
-  }
-
-  render = () => {
-    this.getVertex(this.position, this.size);
-    //   this.showVertex(obj);
-
-    this.showEdges(this.obj);
-    //   this.getSubVertex(obj, size, resolution);
-  };
-
-  vertexOffset = [
-    [0, 0, 0],
-    [1, 0, 0],
-    [1, 1, 0],
-    [0, 1, 0],
-    [0, 0, 1],
-    [1, 0, 1],
-    [1, 1, 1],
-    [0, 1, 1]
-  ];
-
-  edgeConnection = [
-    [0, 1],
-    [1, 2],
-    [2, 3],
-    [3, 0],
-    [4, 5],
-    [5, 6],
-    [6, 7],
-    [7, 4],
-    [0, 4],
-    [1, 5],
-    [2, 6],
-    [3, 7]
-  ];
-
-  gridIndex = (data, threshold) => {
-    this.gridIndex = 0;
-    if (data[0] < threshold) {
-      this.gridIndex |= 1;
-    }
-    if (data[1] < threshold) {
-      this.gridIndex |= 2;
-    }
-    if (data[2] < threshold) {
-      this.gridIndex |= 4;
-    }
-    if (data[3] < threshold) {
-      this.gridIndex |= 8;
-    }
-    if (data[4] < threshold) {
-      this.gridIndex |= 16;
-    }
-    if (data[5] < threshold) {
-      this.gridIndex |= 32;
-    }
-    if (data[6] < threshold) {
-      this.gridIndex |= 64;
-    }
-    if (data[7] < threshold) {
-      this.gridIndex |= 128;
-    }
-  };
-
-  getVertex = (position, size) => {
-    //    console.log("vertex offset:", this.vertexOffset);
-    this.vertex = [];
-    for (let i = 0; i < 8; i++) {
-      let p = new THREE.Vector3(
-        position[0] + size * this.vertexOffset[i][0],
-        position[1] + size * this.vertexOffset[i][1],
-        position[2] + size * this.vertexOffset[i][2]
-      );
-      this.vertex.push(p);
-    }
-  };
-
-  showVertex = obj => {
-    let geo = new THREE.Geometry();
-    let material = new THREE.PointsMaterial({
-      color: 0x000000,
-      size: 30
-    });
-
-    geo.vertices = this.vertex;
-
-    let points = new THREE.Points(geo, material);
-    let vertexObj = new THREE.Object3D();
-    vertexObj.name = "vertex";
-    vertexObj.add(points);
-    //   points.position.y = 150;
-    obj.add(vertexObj);
-  };
-
-  showEdges = obj => {
-    //    console.log("edge connection:", this.edgeConnection);
-    let edgeObj = new THREE.Object3D();
-    edgeObj.name = "edges";
-    for (let i = 0; i < this.edgeConnection.length; i++) {
-      let e = this.edgeConnection[i];
-      //   console.log("edge:", e);
-      let geo = new THREE.Geometry();
-      let material = new THREE.LineBasicMaterial({
-        color: 0xff00ff
-      });
-
-      for (let j = 0; j < e.length; j++) {
-        geo.vertices.push(this.vertex[e[j]]);
-      }
-
-      let edge = new THREE.Line(geo, material);
-      edge.name = "edge";
-      edgeObj.add(edge);
-    }
-    obj.add(edgeObj);
-  };
-}
+import MarchingCubes from "../libs/MarchingCubes";
 
 export default class Sixteenth extends React.Component {
   state = {
@@ -392,9 +218,22 @@ export default class Sixteenth extends React.Component {
     let cubeObj = new THREE.Object3D();
     cubeObj.name = "cube";
     this.scene.add(cubeObj);
-    let pos = [0, 0, 0];
+
+    let data = [];
+    
+    for (let i = 0; i < 513; i++) {
+      data[i] = [];
+      for (let j = 0; j < 513; j++) {
+        data[i][j] = [];
+        for (let k = 0; k < 513; k++) {
+          data[i][j][k] = Math.random();
+        }
+      }
+    }
+    
+    //    console.log("data:", data);
     //  console.log("cube obj:", cubeObj);
-    let c = new Cube(cubeObj, pos, 512, 256);
+    let c = new MarchingCubes(cubeObj, data, 0.5, 128);
     c.render();
   };
 
@@ -411,7 +250,7 @@ export default class Sixteenth extends React.Component {
   };
 
   addHelper = () => {
-    this.helper = new THREE.GridHelper(1024, 64);
+    this.helper = new THREE.GridHelper(1024, 8);
     //      this.helper.position.x = 1000;
     this.helper.material.opacity = 0.25;
     this.helper.material.transparent = true;
