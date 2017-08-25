@@ -1,266 +1,166 @@
 import * as THREE from "three";
 
 export default class MarchingCubes {
-  constructor(obj, data, threshold, resolution) {
-    let size = data.length - 1;
-    //let size = 512;
-    if (resolution > size) {
-      console.error(
-        "resolution is too large, size:",
-        size,
-        ", resolution:",
-        resolution
-      );
-      return;
-    }
-    if (size % resolution !== 0) {
-      console.error(
-        "invalid resolution, size:",
-        size,
-        ",resolution:",
-        resolution
-      );
-      return;
-    }
-    this.obj = obj;
-    this.size = size;
+  constructor(data, threshold, resolution) {
+    //   console.log("data:", data);
+    this.size = {
+      x: data[0][0].length,
+      y: data[0].length,
+      z: data.length
+    };
+    //    this.obj = obj;
     this.resolution = resolution;
     this.data = data;
     this.threshold = threshold;
+    this.faces = [];
   }
-
   render() {
-    let blockObj = new THREE.Object3D();
-    blockObj.name = "block";
-    this.obj.add(blockObj);
-    let times = this.size / this.resolution;
-    for (let k = 0; k < times; k++) {
-      for (let j = 0; j < times; j++) {
-        for (let i = 0; i < times; i++) {
+    let times = {
+      x: this.size.x / this.resolution - 1,
+      y: this.size.y / this.resolution - 1,
+      z: this.size.z / this.resolution - 1
+    };
+    //    console.log("times:", times);
+    for (let k = 0; k < times.z; k++) {
+      for (let j = 0; j < times.y; j++) {
+        for (let i = 0; i < times.x; i++) {
           let p = [
             i * this.resolution,
             j * this.resolution,
             k * this.resolution
           ];
-          let b = new Grid(
-            blockObj,
-            p,
-            this.resolution,
-            this.data,
-            this.threshold
-          );
-          b.render();
+          this.createGrid(p, this.resolution);
         }
       }
     }
-  }
-}
-
-class Grid {
-  constructor(obj, position, size, data, threshold) {
-    this.obj = obj;
-    this.position = position;
-    this.size = size;
-    this.data = data;
-    this.threshold = threshold;
-    this.getVertex();
-    this.gridIndex();
-    this.getCentres();
-    this.getFaces();
+    //   console.log("faces:", this.faces);
+    return this.faceSerialize(this.faces);
   }
 
-  render = () => {
- //   this.showVertex(this.obj);
-    this.showEdges(this.obj);
-    this.showCentres(this.obj);
-    this.showFaces(this.obj);
-  };
-
-  gridIndex = () => {
-    //    console.log("data:", data);
-    this.gridIndex = 0;
-    this.nodeIndex = [1, 1, 1, 1, 1, 1, 1, 1];
-    for (let i = 0; i < 8; i++) {
-      //      this.nodeIndex[i] = 1;
-      if (this.nodeValue[i] < this.threshold) {
-        this.gridIndex |= 1 << i;
-        this.nodeIndex[i] = 0;
-      }
-    }
-    console.log("node index:",this.nodeIndex);
-  };
-
-  getVertex = () => {
-    //    console.log("vertex offset:", this.vertexOffset);
-    this.vertex = [];
-    this.nodeValue = [];
-    for (let i = 0; i < 8; i++) {
-      let p = new THREE.Vector3(
-        this.position[0] + this.size * this.vertexOffset[i][0],
-        this.position[1] + this.size * this.vertexOffset[i][1],
-        this.position[2] + this.size * this.vertexOffset[i][2]
-      );
-      //     p.value = this.data[p.z][p.y][p.x];
-      console.log("p :", i, ",position:", p);
-      this.vertex.push(p);
-      this.nodeValue.push(this.data[p.z][p.y][p.x]);
-    }
-    console.log("data:", this.nodeValue);
-  };
-
-  getCentres = () => {
-    let edgeFlag = this.edgeTable[this.gridIndex];
-    console.log(
-      "grid index:",
-      this.gridIndex,
-      ", edge flag:",
-      edgeFlag,
-      "this vertex:",
-      this.vertex
-    );
-
-    this.edgeIndex = new Array(12);
-/*
+  createGrid = (position, size) => {
+    //console.time("getVertex");
+    let vertex = this.getVertex(position, size);
+    //console.timeEnd("getVertex");
+    //   console.log("vertex:", vertex);
+    //console.time("getGridIndex");
+    let gridIndex = this.getGridIndex(vertex);
+    //console.timeEnd("getGridIndex");
+    // console.log("gridIndex:", gridIndex);
+    let edgeFlag = this.edgeTable[gridIndex];
+    //    console.log("edgeFlag:", edgeFlag);
     if (edgeFlag === 0) {
       return;
     }
-*/
-    this.vertexList = new Array(12);
+    //console.time("getCentres");
+    let centres = this.getCentres(edgeFlag, vertex);
+    //console.timeEnd("getCentres");
+    // console.log("centres:", centres);
+
+    //  console.time("getFaces");
+    let faces = this.getFaces(gridIndex, centres);
+    //   console.timeEnd("getFaces");
+    //    console.log("faces:", faces);
+
+    for (let i = 0; i < faces.length; i++) {
+      this.faces.push(faces[i]);
+    }
+  };
+
+  getVertex = position => {
+    //    console.log("vertex offset:", this.vertexOffset);
+    //  console.log("position:", position);
+    let vertex = [];
+    for (let i = 0; i < 8; i++) {
+      let p = new THREE.Vector3(
+        position[0] + this.resolution * this.vertexOffset[i][0],
+        position[1] + this.resolution * this.vertexOffset[i][1],
+        position[2] + this.resolution * this.vertexOffset[i][2]
+      );
+      p.value = this.data[p.z][p.y][p.x];
+      //  console.log("p :", i, ",position:", p, " ,", this.size);
+      vertex.push(p);
+      //vertex.value = this.data[p.z][p.y][p.x];
+    }
+    return vertex;
+    //    console.log("vertex:", vertex);
+  };
+
+  getGridIndex = vertex => {
+    //    console.log("data:", data);
+    let gridIndex = 0;
+    for (let i = 0; i < 8; i++) {
+      //      this.nodeIndex[i] = 1;
+      if (vertex[i].value < this.threshold) {
+        gridIndex |= 1 << i;
+      }
+    }
+    return gridIndex;
+  };
+
+  getCentres = (edgeFlag, vertex) => {
+    let vertexList = new Array(12);
     for (let i = 0; i < 12; i++) {
       if (edgeFlag & (1 << i)) {
-        this.edgeIndex[i] = 1;
-        let p1 = this.vertex[this.edgeConnection[i][0]];
-        p1.value = this.nodeValue[this.edgeConnection[i][0]];
-        //       p1.value = this.data[this.edgeConnection[i][0]];
-        let p2 = this.vertex[this.edgeConnection[i][1]];
-        p2.value = this.nodeValue[this.edgeConnection[i][1]];
-        //       p2.value = this.data[this.edgeConnection[i][1]];
-        this.vertexList[i] = this.vertexInterp(p1, p2);
+        let p1 = vertex[this.edgeConnection[i][0]];
+        let p2 = vertex[this.edgeConnection[i][1]];
+        vertexList[i] = this.vertexInterp(p1, p2);
       }
-
-      console.log(
-        "index:",
-        i,
-        "intersection:",
-        edgeFlag & (1 << i),
-        ", ",
-        1 << i,
-        ",",
-        this.edgeIndex[i],
-        ",",
-        this.vertexList[i]
-      );
     }
+    return vertexList;
   };
 
-  getFaces = () => {};
-
-  showVertex = obj => {
-    let geo = new THREE.Geometry();
-    let material = new THREE.PointsMaterial({
-      color: "#0040FF",
-      size: 20
-    });
-
-    let ps = [];
-    for (let i = 0; i < 8; i++) {
-      if (this.nodeIndex[i] === 0) {
-        ps.push(this.vertex[i]);
-      }
+  getFaces = (gridIndex, centres) => {
+    let faces = [];
+    for (let i = 0; this.triTable[gridIndex][i] !== -1; i += 3) {
+      let fIndexList = this.triTable[gridIndex];
+      let f = [
+        centres[fIndexList[i]],
+        centres[fIndexList[i + 1]],
+        centres[fIndexList[i + 2]]
+      ];
+      faces.push(f);
     }
-
-    geo.vertices = ps;
-
-    let points = new THREE.Points(geo, material);
-    let vertexObj = new THREE.Object3D();
-    vertexObj.name = "vertex";
-    vertexObj.add(points);
-    //   points.position.y = 150;
-    obj.add(vertexObj);
+    return faces;
   };
 
-  showCentres = obj => {
-    let geo = new THREE.Geometry();
-    let material = new THREE.PointsMaterial({
-      color: "green",
-      size: 10
-    });
-
-    let centrePoints = [];
-    this.centres = [];
-    for (let i = 0; i < 12; i++) {
-      let p = new THREE.Vector3();
-      if (this.vertexList[i] === undefined) {
-        this.centres.push(p);
-        continue;
-      }
-      p.x = this.vertexList[i][0];
-      p.y = this.vertexList[i][1];
-      p.z = this.vertexList[i][2];
-      centrePoints.push(p);
-      this.centres.push(p);
+  foundItemInArray = (array, item) => {
+    let result = -1;
+    if (array.length === 0) {
+      return result;
     }
-
-    geo.vertices = centrePoints;
-
-    let points = new THREE.Points(geo, material);
-    let centreObj = new THREE.Object3D();
-    centreObj.name = "centre";
-    centreObj.add(points);
-    obj.add(centreObj);
+    for (let i = 0; i < array.length; i++) {
+      if (
+        item[0] === array[i][0] &&
+        item[1] === array[i][1] &&
+        item[2] === array[i][2]
+      ) {
+        result = i;
+        return result;
+      }
+    }
+    return result;
   };
 
-  showEdges = obj => {
-    //    console.log("edge connection:", this.edgeConnection);
-    let edgeObj = new THREE.Object3D();
-    edgeObj.name = "edges";
-    for (let i = 0; i < this.edgeConnection.length; i++) {
-      let e = this.edgeConnection[i];
-      //   console.log("edge:", e);
-      let geo = new THREE.Geometry();
-      let material = null;
-      if (this.edgeIndex[i] === 1) {
-        material = new THREE.LineBasicMaterial({
-          color: 0xff00ff
-        });
-      } else {
-        material = new THREE.LineBasicMaterial({
-          color: 0x562727
-        });
+  faceSerialize = faces => {
+    var result = {
+      vertex: [],
+      face: []
+    };
+    for (let i = 0; i < faces.length; i++) {
+      var f = [];
+      for (let j = 0; j < 3; j++) {
+        let index = this.foundItemInArray(result.vertex, faces[i][j]);
+        if (index === -1) {
+          result.vertex.push(faces[i][j]);
+          f.push(result.vertex.length - 1);
+        } else {
+          f.push(index);
+        }
       }
-
-      for (let j = 0; j < e.length; j++) {
-        geo.vertices.push(this.vertex[e[j]]);
-      }
-
-      let edge = new THREE.Line(geo, material);
-      edge.name = "edge";
-      edgeObj.add(edge);
+      result.face.push(f);
     }
-    obj.add(edgeObj);
-  };
-
-  showFaces = obj => {
-    let material = new THREE.MeshStandardMaterial({
-      color: 0x00cc00,
-      side: THREE.DoubleSide
-    });
-
-    let geo = new THREE.Geometry();
-    geo.vertices = this.centres;
-    console.log("tritable:", this.triTable[this.gridIndex]);
-    for (let i = 0; this.triTable[this.gridIndex][i] !== -1; i += 3) {
-      let f = this.triTable[this.gridIndex];
-      let face = new THREE.Face3(f[i], f[i + 1], f[i + 2]);
-      geo.faces.push(face);
-
-      geo.computeFaceNormals();
-      geo.computeVertexNormals();
-    }
-    let faceObj = new THREE.Mesh(geo, material);
-    faceObj.name = "faces";
-
-    obj.add(faceObj);
+    //console.log("face serial:", result);
+    return result;
   };
 
   //P = P1 + (isovalue - V1)(P2-P1)/(V2-V1)
@@ -823,3 +723,138 @@ class Grid {
     [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1]
   ];
 }
+
+/*
+class Grid {
+  constructor(obj, position, size, data, threshold) {
+    this.obj = obj;
+    this.position = position;
+    this.size = size;
+    this.data = data;
+    this.threshold = threshold;
+  }
+
+  render = () => {
+    this.getVertex();
+    if (this.gridIndex() === 0) {
+      return;
+    }
+    this.getCentres();
+    this.getFaces();
+    //   this.showVertex(this.obj);
+    //  this.showEdges(this.obj);
+    this.showCentres(this.obj);
+    this.showFaces(this.obj);
+  };
+
+  getFaces = () => {};
+
+  showVertex = obj => {
+    let geo = new THREE.Geometry();
+    let material = new THREE.PointsMaterial({
+      color: "#0040FF",
+      size: 20
+    });
+
+    let ps = [];
+    for (let i = 0; i < 8; i++) {
+      if (this.nodeIndex[i] === 0) {
+        ps.push(this.vertex[i]);
+      }
+    }
+
+    geo.vertices = ps;
+
+    let points = new THREE.Points(geo, material);
+    let vertexObj = new THREE.Object3D();
+    vertexObj.name = "vertex";
+    vertexObj.add(points);
+    //   points.position.y = 150;
+    obj.add(vertexObj);
+  };
+
+  showCentres = obj => {
+    let geo = new THREE.Geometry();
+    let material = new THREE.PointsMaterial({
+      color: "green",
+      size: 10
+    });
+
+    let centrePoints = [];
+    this.centres = [];
+    for (let i = 0; i < 12; i++) {
+      let p = new THREE.Vector3();
+      if (this.vertexList[i] === undefined) {
+        this.centres.push(p);
+        continue;
+      }
+      p.x = this.vertexList[i][0];
+      p.y = this.vertexList[i][1];
+      p.z = this.vertexList[i][2];
+      centrePoints.push(p);
+      this.centres.push(p);
+    }
+
+    geo.vertices = centrePoints;
+
+    let points = new THREE.Points(geo, material);
+    let centreObj = new THREE.Object3D();
+    centreObj.name = "centre";
+    centreObj.add(points);
+    obj.add(centreObj);
+  };
+
+  showEdges = obj => {
+    //    console.log("edge connection:", this.edgeConnection);
+    let edgeObj = new THREE.Object3D();
+    edgeObj.name = "edges";
+    for (let i = 0; i < this.edgeConnection.length; i++) {
+      let e = this.edgeConnection[i];
+      //   console.log("edge:", e);
+      let geo = new THREE.Geometry();
+      let material = null;
+      if (this.edgeIndex[i] === 1) {
+        material = new THREE.LineBasicMaterial({
+          color: 0xff00ff
+        });
+      } else {
+        material = new THREE.LineBasicMaterial({
+          color: 0x562727
+        });
+      }
+
+      for (let j = 0; j < e.length; j++) {
+        geo.vertices.push(this.vertex[e[j]]);
+      }
+
+      let edge = new THREE.Line(geo, material);
+      edge.name = "edge";
+      edgeObj.add(edge);
+    }
+    obj.add(edgeObj);
+  };
+
+  showFaces = obj => {
+    let material = new THREE.MeshStandardMaterial({
+      color: 0x00cc00,
+      side: THREE.DoubleSide
+    });
+
+    let geo = new THREE.Geometry();
+    geo.vertices = this.centres;
+    console.log("tritable:", this.triTable[this.gridIndex]);
+    for (let i = 0; this.triTable[this.gridIndex][i] !== -1; i += 3) {
+      let f = this.triTable[this.gridIndex];
+      let face = new THREE.Face3(f[i], f[i + 1], f[i + 2]);
+      geo.faces.push(face);
+
+      geo.computeFaceNormals();
+      geo.computeVertexNormals();
+    }
+    let faceObj = new THREE.Mesh(geo, material);
+    faceObj.name = "faces";
+
+    obj.add(faceObj);
+  };
+}
+*/

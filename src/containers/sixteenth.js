@@ -10,12 +10,17 @@ export default class Sixteenth extends React.Component {
     aspect: this.props.width / this.props.height,
 
     camera: {
-      positionX: -337,
-      positionY: 653,
-      positionZ: 734,
-      lookX: -74,
-      lookY: 471,
-      lookZ: 471
+      positionX: 53,
+      positionY: 253,
+      positionZ: 153,
+      lookX: 113,
+      lookY: -67,
+      lookZ: 33
+    },
+    params: {
+      width: 200,
+      height: 160,
+      depth: 160
     }
   };
 
@@ -26,7 +31,7 @@ export default class Sixteenth extends React.Component {
 
     this.objects();
 
-    this.light();
+    //  this.light();
     this.datGUI();
     this.stats();
 
@@ -37,6 +42,7 @@ export default class Sixteenth extends React.Component {
 
   scene = () => {
     this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0xf0f0f0);
   };
 
   addToContainer = element => {
@@ -69,9 +75,9 @@ export default class Sixteenth extends React.Component {
     controls.enabled = true;
 
     controls.target.set(
-      this.props.width / 2,
-      this.props.height / 2,
-      this.props.width / 2
+      this.state.params.width / 2,
+      this.state.params.height / 2,
+      this.state.params.width / 2
     );
 
     controls.update();
@@ -186,28 +192,26 @@ export default class Sixteenth extends React.Component {
   };
 
   light = () => {
+    let light = new THREE.DirectionalLight(0xffffff);
+    light.position.set(0.5, 0.5, 1);
+    this.scene.add(light);
+
     let ambientLight = new THREE.AmbientLight(0xf0f0f0);
     this.scene.add(ambientLight);
 
-    let spotLight = new THREE.SpotLight(0xffffff, 1.5);
-    spotLight.position.set(0, 1500, 200);
-    spotLight.castShadow = true;
-    spotLight.shadow = new THREE.LightShadow(
-      new THREE.PerspectiveCamera(70, 1, 200, 2000)
-    );
-    spotLight.shadow.bias = -0.000222;
-    spotLight.shadow.mapSize.width = 1024;
-    spotLight.shadow.mapSize.height = 1024;
-
-    this.scene.add(spotLight);
+    let pointLight = new THREE.PointLight(0xff3300);
+    pointLight.position.set(0, 0, 100);
+    this.scene.add(pointLight);
   };
 
   objects = () => {
     //  this.addPlane();
-    this.addHelper();
+    //   this.addHelper();
     //  this.addAxis();
 
-    this.addCubes();
+    //this.addCubes();
+
+    this.loadRaw();
 
     console.log("scene:", this.scene.children);
   };
@@ -218,9 +222,9 @@ export default class Sixteenth extends React.Component {
     let cubeObj = new THREE.Object3D();
     cubeObj.name = "cube";
     this.scene.add(cubeObj);
-
+    /*
     let data = [];
-    
+
     for (let i = 0; i < 513; i++) {
       data[i] = [];
       for (let j = 0; j < 513; j++) {
@@ -230,11 +234,62 @@ export default class Sixteenth extends React.Component {
         }
       }
     }
-    
+*/
     //    console.log("data:", data);
     //  console.log("cube obj:", cubeObj);
-    let c = new MarchingCubes(cubeObj, data, 0.5, 128);
-    c.render();
+    let c = new MarchingCubes(this.dataSource.data, 160, 1);
+    //  let c = new MarchingCubes(data, 0.5, 64);
+    console.time("render");
+    let f = c.render();
+    console.timeEnd("render");
+
+   // console.log("f:", f);
+
+    console.time("showFaces");
+    this.showFaces(f);
+    console.timeEnd("showFaces");
+    
+    
+  };
+
+  showFaces = faces => {
+    let geo = new THREE.Geometry();
+    let material = new THREE.MeshNormalMaterial({
+     // color: 0xcae1c3,
+      //      emissive: 0x640707,
+      //      shininess: 1,
+      //      roughness: 1,
+      //      metalness: 1,
+      wireframe: false,
+      //      flatShading: true,
+      opacity: 1,
+      side: THREE.FrontSide,
+      transparent: true
+    });
+    for (let i = 0; i < faces.vertex.length; i++) {
+      let p = new THREE.Vector3(
+        faces.vertex[i][0],
+        faces.vertex[i][1],
+        faces.vertex[i][2]
+      );
+      geo.vertices.push(p);
+    }
+    //    geo.vertices = faces.vertex;
+    for (let i = 0; i < faces.face.length; i++) {
+      let f = new THREE.Face3(
+        faces.face[i][0],
+        faces.face[i][1],
+        faces.face[i][2]
+      );
+      geo.faces.push(f);
+    }
+    geo.computeFaceNormals();
+    geo.computeVertexNormals();
+
+    let faceObj = new THREE.Mesh(geo, material);
+    faceObj.name = "faces";
+
+    this.scene.add(faceObj);
   };
 
   addPlane = () => {
@@ -261,5 +316,49 @@ export default class Sixteenth extends React.Component {
     this.axis = new THREE.AxisHelper();
     //    this.axis.position.set(1000, 0, 0);
     this.scene.add(this.axis);
+  };
+
+  handleRawOnload = data => {
+    let array = new Uint8Array(data);
+    //   console.log("read mri:", data, array);
+    this.dataSource = {};
+    this.dataSource.width = this.state.params.width;
+    this.dataSource.height = this.state.params.height;
+    this.dataSource.depth = this.state.params.depth;
+    //    this.dataSource.points = [];
+    this.dataSource.data = [];
+    let index = 0;
+    //   console.log("data source 0 :", this.dataSource);
+    for (let i = 0; i < this.dataSource.depth; i++) {
+      this.dataSource.data[i] = [];
+      for (let j = 0; j < this.dataSource.height; j++) {
+        this.dataSource.data[i][j] = [];
+        for (let k = 0; k < this.dataSource.width; k++) {
+          this.dataSource.data[i][j][k] = array[index];
+          index++;
+        }
+      }
+    }
+    //   console.log("data source:", this.dataSource);
+    this.addCubes();
+  };
+
+  handleRawOnProgress = xhr => {
+    console.log(xhr.loaded / xhr.total * 100 + "% loaded");
+  };
+
+  hanldeRawOnError = xhr => {
+    console.log("failed:", xhr);
+  };
+
+  loadRaw = () => {
+    let loader = new THREE.FileLoader();
+    loader.setResponseType("arraybuffer");
+    loader.load(
+      "data/mri.raw",
+      this.handleRawOnload,
+      this.handleRawOnProgress,
+      this.hanldeRawOnError
+    );
   };
 }
